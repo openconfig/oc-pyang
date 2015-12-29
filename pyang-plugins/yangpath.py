@@ -150,7 +150,7 @@ def print_node (node, module, fd, prefix, ctx, level=0):
   else:
       config = None
 
-  pathstr = get_pathstr (pathstr, config, ctx)
+  pathstr = get_pathstr (pathstr, config, ctx, level)
 
   fd.write (pathstr)
 
@@ -170,7 +170,7 @@ def print_node (node, module, fd, prefix, ctx, level=0):
     else:
         print_children(node.i_children, module, fd, prefix, ctx, level)
 
-def get_pathstr (pathstr, config, ctx):
+def get_pathstr (pathstr, config, ctx, level):
 
   if ctx.opts.print_plain or ctx.opts.relocate_output:
     return pathstr
