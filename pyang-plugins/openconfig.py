@@ -82,11 +82,11 @@ class OpenConfigPlugin(lint.LintPlugin):
       lambda ctx, s: v_chk_octypes(ctx, s))
 
     statements.add_validation_fun(
-      'reference_1', ['leaf', 'leaf-list'],
+      'reference_2', ['leaf', 'leaf-list'],
       lambda ctx, s: v_chk_opstate_paths(ctx,s))
 
     statements.add_validation_fun(
-      'reference2', ['path, augment'],
+      'reference_2', ['path, augment'],
       lambda ctx, s: v_chk_path_refs(ctx,s))
 
     # add the OpenConfig error codes
@@ -101,11 +101,21 @@ class OpenConfigPlugin(lint.LintPlugin):
       'OC_OPSTATE_CONTAINER_COUNT', 3,
       'path "%s" should have a single "config" or "state" component')
 
+    # leaves should be in a 'config' or 'state' container
+    error.add_error_code(
+      'OC_OPSTATE_CONTAINER_NAME', 3,
+      'element "%s" at path "%s" should be in a "config" or "state" container')
+
     # list keys should be leafrefs to respective value in config / state
     error.add_error_code(
       'OC_OPSTATE_KEY_LEAFREF', 3,
       'list key "%s" should be type leafref with a reference to corresponding' +
       ' leaf in config or state container')
+
+    # leaves in in config / state should have the correct config property
+    error.add_error_code(
+      'OC_OPSTATE_CONFIG_PROPERTY', 3,
+      'element "%s" is in a "%s" container and should have config value %s')
 
     # references to nodes in the same module / namespace should use relative
     # paths
@@ -155,6 +165,23 @@ def v_chk_opstate_paths(ctx, statement):
   if confignum != 1 and statenum != 1:
     err_add (ctx.errors, statement.pos, 'OC_OPSTATE_CONTAINER_COUNT',
       (pathstr))
+
+  # for elements in a config or state container, make sure they have the
+  # correct config property
+  if statement.parent.keyword == 'container':
+    # print "%s %s in container: %s (%s)" % (statement.keyword, pathstr,
+    #  str(statement.parent.arg), statement.i_config)
+    if statement.parent.arg == 'config':
+      if statement.i_config is False:
+        err_add (ctx.errors, statement.pos, 'OC_OPSTATE_CONFIG_PROPERTY',
+          (statement.arg, 'config', 'true'))
+    elif statement.parent.arg == 'state':
+      if statement.i_config is True:
+        err_add (ctx.errors, statement.parent.pos, 'OC_OPSTATE_CONFIG_PROPERTY',
+          (statement.arg, 'state', 'false'))
+    else:
+      err_add (ctx.errors, statement.pos, 'OC_OPSTATE_CONTAINER_NAME',
+      (statement.arg, pathstr))
 
 def v_chk_path_refs(ctx, statement):
   """Check path references for absolute / relative paths as appropriate.
