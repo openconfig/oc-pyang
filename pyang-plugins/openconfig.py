@@ -102,7 +102,7 @@ class OpenConfigPlugin(lint.LintPlugin):
 
     # Checks lists within the structure
     statements.add_validation_fun(
-      'reference_2', ['list'],
+      'reference_4', ['list'],
       lambda ctx, s: v_chk_list_placement(ctx, s))
 
     # Checks relevant to the specifications of paths in the module
@@ -256,7 +256,11 @@ def v_chk_ocmodule(ctx, statement):
     err_add(ctx.errors, statement.pos, 'OC_MODULE_DATA_DEFINITIONS',
       (statement.arg, ", ".join(data_definitions)))
 
-  if not ('openconfig-extensions', 'openconfig-version') in statement.substmts:
+  version = False
+  for s in statement.substmts:
+    if isinstance(s.keyword, tuple) and s.keyword[1] == 'openconfig-version':
+      version = True
+  if not version:
     err_add(ctx.errors, statement.pos, 'OC_MODULE_MISSING_VERSION',
       statement.arg)
 
@@ -304,7 +308,7 @@ def v_chk_opstate_paths(ctx, statement):
       if statement.i_config is False:
         err_add(ctx.errors, statement.pos, 'OC_OPSTATE_CONFIG_PROPERTY',
           (statement.arg, 'config', 'true'))
-    elif statement.parent.arg == 'state':
+    elif statement.parent.arg == 'state' or statement.parent.arg == 'counters':
       if statement.i_config is True:
         err_add(ctx.errors, statement.parent.pos, 'OC_OPSTATE_CONFIG_PROPERTY',
           (statement.arg, 'state', 'false'))
@@ -366,11 +370,15 @@ def v_chk_path_refs(ctx, statement):
   # consider the namespace in the first component
   # assumes that if the namespace matches the module namespace, then
   # relative path should be used (intra-module )
-  (namespace, barepath) = component[0].split(':')
+  if ":" in components[0]:
+    (namespace, barepath) = components[0].split(':')
+  else:
+    namespace = statement.i_module.i_prefix
+    barepath = components[0]
   mod_prefix = statement.i_module.i_prefix
   if namespace == mod_prefix and abspath:
     err_add(ctx.errors, statement.pos, 'OC_RELATIVE_PATH',
-      statement.keyword, statement.arg)
+      (statement.keyword, statement.arg))
 
 def v_chk_list_placement(ctx, statement):
   """
