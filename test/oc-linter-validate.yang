@@ -1,0 +1,209 @@
+module oc-linter-validate {
+
+  yang-version "1";
+
+  // namespace
+  namespace "http://openconfig.net/yang/linter/validate";
+
+  prefix "linter-validate";
+
+  // import some basic types
+  import openconfig-extensions { prefix oc-ext; }
+
+  // meta
+  organization "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    www.openconfig.net";
+
+  description
+    "This module tests the OpenConfig linter.";
+
+  oc-ext:openconfig-version "0.0.1";
+
+  revision "2015-03-06" {
+    description
+      "Initial revision";
+    reference "0.0.1";
+  }
+
+  feature FEATURE {
+    description "a feature";
+  }
+
+  identity identitylowercase {
+    description "An invalid identity: lower case";
+  }
+
+  identity IDENTITY-WITH-HYPHENS {
+    description "An invalid identity: upper case with hyphens";
+  }
+
+  identity VALID_IDENTITY {
+    description "A valid identity";
+  }
+
+  grouping linter-top {
+    description
+      "Grouping covering the linter";
+
+    leaf MISPLACED-LEAF {
+      type string;
+      description
+        "This leaf is outside of a config or state container, and hence
+        is invalid";
+    }
+
+    container config {
+      description
+        "Configuration parameters";
+      uses linter_config;
+
+    }
+
+    container state {
+      config false;
+      description
+        "State parameters";
+      uses linter_config;
+    }
+
+    container MULTIPLE-CONFIG-CONTAINERS {
+      description
+        "Multiple config containers";
+
+      container config {
+        description
+          "Config one";
+        container nested {
+          description "Invalid container";
+          container config {
+            description "Second config container";
+
+            leaf MULTIPLE-CONFIG-CONTAINER-LEAF {
+              type string;
+              description "check";
+            }
+          }
+        }
+      }
+    }
+
+    container READ-WRITE-STATE {
+      description "state container left r/w";
+
+      container config {
+        description "config";
+        leaf READ-WRITE {
+          type string;
+          description "READ-WRITE leaf";
+        }
+      }
+
+      container state {
+        description "state";
+        leaf READ-ONLY {
+          type string;
+          description "NOT READ ONLY leaf";
+        }
+      }
+    }
+
+    container BAD-LIST-CONTAINER {
+      description
+        "A surrounding list container that has other elements";
+
+      container config {
+        description "Invalid config container in list container";
+      }
+
+      container state {
+        description "Invalid state container in list container";
+      }
+
+      list LIST {
+        key "keyval";
+        description "A list";
+
+        leaf keyval {
+          type leafref {
+            path "../config/keyval";
+          }
+          description
+            "Reference to key value";
+        }
+
+        container config {
+          description
+            "Config values";
+
+          leaf keyval {
+            type string;
+            description
+              "Key value";
+          }
+        }
+      }
+    }
+
+    container STYLEGUIDE-AVOID {
+      description
+        "Elements to be avoided by the styleguide";
+
+      container config {
+        presence "some presence";
+        description
+          "Config elements";
+
+        choice CHOICE {
+          description
+            "A choice";
+          case ONE {
+            description
+              "A case";
+            leaf one {
+              type string;
+              description
+                "A leaf";
+            }
+          }
+        }
+      }
+    }
+  }
+
+  grouping linter_config {
+    description
+      "Top level config leaves";
+
+    leaf INVALID-ENUMERATION {
+      type enumeration {
+        enum lowercase {
+          description "Lower case naming";
+        }
+        enum UPPERCASE-HYPHEN {
+          description "Includes hyphens";
+        }
+      }
+      description
+        "A leaf not matching rules relating to enums";
+    }
+
+    leaf FEATURE-LEAF {
+      if-feature FEATURE;
+      type string;
+      description
+        "An if-feature leaf";
+    }
+  }
+
+
+  uses linter-top;
+
+  container INVALID-TOP-LEVEL {
+    description
+      "An invalid top-level container";
+  }
+
+}
