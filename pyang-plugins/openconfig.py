@@ -24,6 +24,7 @@ import optparse
 import sys
 import os.path
 import re
+import regex
 
 from pyang import plugin
 from pyang import statements
@@ -78,7 +79,6 @@ class OpenConfigPlugin(lint.LintPlugin):
             'RFC 6087: 4.1: '
             + 'no module name prefix used, suggest %s-%s')
 
-
     # add the OpenConfig validators
 
     # Check for all type statements
@@ -93,6 +93,18 @@ class OpenConfigPlugin(lint.LintPlugin):
     statements.add_validation_fun(
       'type_2', ['presence', 'choice', 'feature', 'if-feature'],
       lambda ctx, s: v_styleguide_warnings(ctx, s))
+
+    statements.add_validation_fun(
+      'type_2', ['leaf', 'leaf-list', 'list', 'container'],
+      lambda ctx, s: v_chk_data_elements(ctx, s))
+
+    statements.add_validation_fun(
+      'type_2', ['container'],
+      lambda ctx, s: v_chk_standard_grouping_naming(ctx, s))
+
+    statements.add_validation_fun(
+      'type_2', ['prefix'],
+      lambda ctx, s: v_chk_prefix(ctx, s))
 
     # Checks relevant to placement of leaves and leaf lists within the
     # opstate structure
@@ -114,6 +126,7 @@ class OpenConfigPlugin(lint.LintPlugin):
     statements.add_validation_fun(
       'reference_4', ['container'],
       lambda ctx, s: v_chk_leaf_mirroring(ctx,s))
+
 
     # add the OpenConfig error codes
 
@@ -204,6 +217,33 @@ class OpenConfigPlugin(lint.LintPlugin):
       'OC_STYLE_AVOID_FEATURES', 4, 'Element %s uses feature or if-feature ' +
         'which should be avoided')
 
+    # invalid semantic version argument to openconfig-version
+    error.add_error_code(
+      'OC_INVALID_SEMVER', 3, 'Semantic version specified (%s) is invalid')
+
+    # missing a revision statement that has a reference of the
+    # current semantic version
+    error.add_error_code(
+      'OC_MISSING_SEMVER_REVISION', 4, 'No revision statement corresponding ' +
+          'with semantic version %s')
+
+    # invalid data element naming
+    error.add_error_code(
+      'OC_DATA_ELEMENT_INVALID_NAME', 3, 'Invalid naming for element %s ' +
+          'data elements should be lower-case-with-hyphens')
+
+    error.add_error_code(
+      'OC_PREFIX_INVALID', 4, 'Prefix %s for module does not match the ' +
+          'expected format - use the form oc-xxx(-yyy)?')
+
+    error.add_error_code(
+      'OC_MISSING_STANDARD_GROUPING', 4, 'Module %s is missing a container suffixed ' +
+        'with %s')
+
+    error.add_error_code(
+      'OC_GROUPING_NAMING_NONSTANDARD', 4, 'In container %s, grouping %s does not ' +
+        'match standard naming - suffix with %s?')
+
   # def post_validate(self, ctx, modules):
 
   #   for module in modules:
@@ -256,13 +296,39 @@ def v_chk_ocmodule(ctx, statement):
     err_add(ctx.errors, statement.pos, 'OC_MODULE_DATA_DEFINITIONS',
       (statement.arg, ", ".join(data_definitions)))
 
-  version = False
+  version = None
   for s in statement.substmts:
     if isinstance(s.keyword, tuple) and s.keyword[1] == 'openconfig-version':
-      version = True
-  if not version:
+      version = s
+  if version is None:
     err_add(ctx.errors, statement.pos, 'OC_MODULE_MISSING_VERSION',
       statement.arg)
+    return
+
+  if not re.match("^[0-9]+\.[0-9]+\.[0-9]+$", version.arg):
+    err_add(ctx.errors, statement.pos, 'OC_INVALID_SEMVER',
+      version.arg)
+
+  match_revision = False
+  for revision_stmt in statement.search('revision'):
+    reference_stmt = revision_stmt.search_one('reference')
+    if reference_stmt is not None and \
+              reference_stmt.arg == version.arg:
+      match_revision = True
+
+  if match_revision is False:
+    err_add(ctx.errors, statement.pos, 'OC_MISSING_SEMVER_REVISION',
+      version.arg)
+
+  top_containers = []
+  for container in statement.search('grouping'):
+    if re.match("\-top$", statement.arg):
+      top_containers.append(statement.arg)
+  if not len(top_containers):
+    err_add(ctx.errors, statement.pos, 'OC_MISSING_STANDARD_GROUPING',
+      (statement.arg, "-top"))
+
+
 
 def v_chk_opstate_paths(ctx, statement):
   """
@@ -412,3 +478,26 @@ def v_styleguide_warnings(ctx, statement):
     err_add(ctx.errors, statement.parent.pos, 'OC_STYLE_AVOID_FEATURES',
       (statement.parent.arg))
 
+def v_chk_data_elements(ctx, statement):
+  if not re.match("^[a-z\-]+$", statement.arg):
+    err_add(ctx.errors, statement.pos, 'OC_DATA_ELEMENT_INVALID_NAME',
+      statement.arg)
+
+def v_chk_prefix(ctx, statement):
+  if not re.match("^oc\-[a-z\-]+$", statement.arg):
+    err_add(ctx.errors, statement.pos, 'OC_PREFIX_INVALID',
+      statement.arg)
+
+def v_chk_standard_grouping_naming(ctx, statement):
+
+  # we don't want to check 'config' or 'state' containers
+  if statement.arg in ['config', 'state']:
+    return
+
+  cfg_container, state_container = None, None
+  containers = statement.search('container')
+  for container in containers:
+    if container.arg == "config":
+      cfg_container = container
+    elif container.arg == "state":
+      state_container = container
