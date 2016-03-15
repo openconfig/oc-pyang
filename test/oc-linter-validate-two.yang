@@ -1,0 +1,26 @@
+module oc-linter-validate-two {
+
+  yang-version "1";
+
+  // namespace
+  namespace "http://openconfig.net/yang/linter/validate-two";
+
+  prefix "linter-validate-two";
+
+  // import some basic types
+  import openconfig-extensions { prefix oc-ext; }
+
+  // meta
+  organization "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    www.openconfig.net";
+
+  description
+    "This module tests the OpenConfig linter with options
+    that are incompatible with those used in the first
+    module.";
+
+
+}
