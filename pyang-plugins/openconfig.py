@@ -83,7 +83,7 @@ class OpenConfigPlugin(lint.LintPlugin):
 
     # Check for all type statements
     statements.add_validation_fun(
-      'type_2', ['type', 'identity'],
+      'type_2', ['type', 'identity', 'identityref'],
       lambda ctx, s: v_chk_octypes(ctx, s))
 
     statements.add_validation_fun(
@@ -192,6 +192,10 @@ class OpenConfigPlugin(lint.LintPlugin):
       'List %s is within a container (%s) that has other elements ' +
           'within it: %s')
 
+    error.add_error_code(
+      'OC_LIST_NO_ENCLOSING_CONTAINER', 3,
+      'List %s is directly within a config or state container (%s)')
+
     # a module defines data nodes at the top-level
     error.add_error_code(
       'OC_MODULE_DATA_DEFINITIONS', 3,
@@ -237,7 +241,7 @@ class OpenConfigPlugin(lint.LintPlugin):
           'expected format - use the form oc-xxx(-yyy)?')
 
     error.add_error_code(
-      'OC_MISSING_STANDARD_GROUPING', 4, 'Module %s is missing a container suffixed ' +
+      'OC_MISSING_STANDARD_GROUPING', 4, 'Module %s is missing a grouping suffixed ' +
         'with %s')
 
     error.add_error_code(
@@ -280,6 +284,16 @@ def v_chk_octypes(ctx, statement):
       err_add(ctx.errors, statement.pos, 'OC_IDENTITY_UNDERSCORES',
         (statement.arg, statement.arg.upper().replace("-", "_")))
 
+  if (statement.keyword == 'identityref'):
+    base_stmt = statement.search_one('base')
+    if base_stmt is not None:
+      if not re_uc.search(base_stmt.arg):
+        err_add(ctx.errors, statement.pos, 'OC_IDENTITY_CASE',
+          (base_stmt.arg, base_stmt.arg.upper()))
+      if not re_ucwithunderscore.match(base_stmt.arg):
+        err_add(ctx.errors, statement.pos, 'OC_IDENTITY_UNDERSCORES',
+          (base_stmt.arg, base_stmt.arg.upper()))
+
 def v_chk_ocmodule(ctx, statement):
   """
     Check characteristics of an entire OpenConfig module.
@@ -320,11 +334,11 @@ def v_chk_ocmodule(ctx, statement):
     err_add(ctx.errors, statement.pos, 'OC_MISSING_SEMVER_REVISION',
       version.arg)
 
-  top_containers = []
-  for container in statement.search('grouping'):
-    if re.match("\-top$", statement.arg):
-      top_containers.append(statement.arg)
-  if not len(top_containers):
+  top_groupings = []
+  for grouping in statement.search('grouping'):
+    if re.match(".*\-top$", grouping.arg):
+      top_groupings.append(grouping.arg)
+  if not len(top_groupings):
     err_add(ctx.errors, statement.pos, 'OC_MISSING_STANDARD_GROUPING',
       (statement.arg, "-top"))
 
@@ -454,6 +468,10 @@ def v_chk_list_placement(ctx, statement):
         have any other elements within it.
   """
 
+  if statement.parent.arg in ["config", "state"]:
+    err_add(ctx.errors, statement.parent.pos, 'OC_LIST_NO_ENCLOSING_CONTAINER',
+      (statement.arg, statement.parent.arg))
+
   parent_substmts = [i.arg for i in statement.parent.substmts
                       if i.keyword in INSTANTIATED_DATA_KEYWORDS]
   if not parent_substmts == [statement.arg]:
@@ -479,12 +497,13 @@ def v_styleguide_warnings(ctx, statement):
       (statement.parent.arg))
 
 def v_chk_data_elements(ctx, statement):
-  if not re.match("^[a-z\-]+$", statement.arg):
+  if not re.match("^[a-z0-9\-]+$", statement.arg):
     err_add(ctx.errors, statement.pos, 'OC_DATA_ELEMENT_INVALID_NAME',
       statement.arg)
 
 def v_chk_prefix(ctx, statement):
-  if not re.match("^oc\-[a-z\-]+$", statement.arg):
+  if not re.match("^oc\-[a-z\-]+$", statement.arg) and \
+        "openconfig-" in statement.arg:
     err_add(ctx.errors, statement.pos, 'OC_PREFIX_INVALID',
       statement.arg)
 
