@@ -228,17 +228,17 @@ class OpenConfigPlugin(lint.LintPlugin):
     # missing a revision statement that has a reference of the
     # current semantic version
     error.add_error_code(
-      'OC_MISSING_SEMVER_REVISION', 4, 'No revision statement corresponding ' +
-          'with semantic version %s')
+      'OC_MISSING_SEMVER_REVISION', 4, 'Revision statement should contain' +
+        'reference substatement corresponding to semantic version %s')
 
     # invalid data element naming
     error.add_error_code(
       'OC_DATA_ELEMENT_INVALID_NAME', 3, 'Invalid naming for element %s ' +
-          'data elements should be lower-case-with-hyphens')
+          'data elements should generally be lower-case-with-hypens')
 
     error.add_error_code(
       'OC_PREFIX_INVALID', 4, 'Prefix %s for module does not match the ' +
-          'expected format - use the form oc-xxx(-yyy)?')
+          'expected format - use the form oc-<shortdescription>')
 
     error.add_error_code(
       'OC_MISSING_STANDARD_GROUPING', 4, 'Module %s is missing a grouping suffixed ' +
@@ -262,7 +262,7 @@ def v_chk_octypes(ctx, statement):
   """
 
   re_uc = re.compile(r'[a-z]')
-  re_ucwithunderscore = re.compile(r'^[A-Z][0-9A-Z\_]+$')
+  re_ucwithunderscore = re.compile(r'^[A-Z][0-9A-Z\_\.]+$')
 
   if (statement.arg == 'enumeration'):
     enums = statement.search('enum')
@@ -497,7 +497,7 @@ def v_styleguide_warnings(ctx, statement):
       (statement.parent.arg))
 
 def v_chk_data_elements(ctx, statement):
-  if not re.match("^[a-z0-9\-]+$", statement.arg):
+  if not re.match("^[A-Za-z0-9\-]+$", statement.arg):
     err_add(ctx.errors, statement.pos, 'OC_DATA_ELEMENT_INVALID_NAME',
       statement.arg)
 
