@@ -233,7 +233,7 @@ class OpenConfigPlugin(lint.LintPlugin):
 
     # invalid data element naming
     error.add_error_code(
-      'OC_DATA_ELEMENT_INVALID_NAME', 3, 'Invalid naming for element %s ' +
+      'OC_DATA_ELEMENT_INVALID_NAME', 4, 'Invalid naming for element %s ' +
           'data elements should generally be lower-case-with-hypens')
 
     error.add_error_code(
