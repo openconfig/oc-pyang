@@ -24,7 +24,6 @@ import optparse
 import sys
 import os.path
 import re
-import regex
 
 from pyang import plugin
 from pyang import statements
