@@ -30,7 +30,7 @@ from pyang import statements
 from pyang import error
 from pyang.error import err_add
 from pyang.plugins import lint
-from util import pathtree
+from util import yangpath
 
 INSTANTIATED_DATA_KEYWORDS = ['leaf', 'leaf-list', 'container', 'list',
                                 'choice']
@@ -369,8 +369,8 @@ def v_chk_opstate_paths(ctx, statement):
     # print "leaf %s is a key, skipping" % statement.arg
     return
 
-  #path_elements = [c.encode('ascii', 'ignore') for c in pathtree.split_paths(pathstr)]
-  path_elements = pathtree.split_paths(pathstr)
+  #path_elements = [c.encode('ascii', 'ignore') for c in yangpath.split_paths(pathstr)]
+  path_elements = yangpath.split_paths(pathstr)
   # count number of 'config' and 'state' elements in the path
   confignum = path_elements.count('config')
   statenum = path_elements.count('state')
@@ -445,7 +445,7 @@ def v_chk_path_refs(ctx, statement):
     abspath = True
   else:
     abspath = False
-  components = pathtree.split_paths(path)
+  components = yangpath.split_paths(path)
   # consider the namespace in the first component
   # assumes that if the namespace matches the module namespace, then
   # relative path should be used (intra-module )
