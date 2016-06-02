@@ -80,6 +80,10 @@ class OpenConfigPlugin(lint.LintPlugin):
 
     # add the OpenConfig validators
 
+    statements.add_validation_fun(
+      'init2', ['module'],
+      lambda ctx, s: v_pre_module_checks(ctx, s))
+
     # Check for all type statements
     statements.add_validation_fun(
       'type_2', ['type', 'identity', 'identityref'],
@@ -125,7 +129,6 @@ class OpenConfigPlugin(lint.LintPlugin):
     statements.add_validation_fun(
       'reference_4', ['container'],
       lambda ctx, s: v_chk_leaf_mirroring(ctx,s))
-
 
     # add the OpenConfig error codes
 
@@ -246,6 +249,10 @@ class OpenConfigPlugin(lint.LintPlugin):
     error.add_error_code(
       'OC_GROUPING_NAMING_NONSTANDARD', 4, 'In container %s, grouping %s does not ' +
         'match standard naming - suffix with %s?')
+
+    error.add_error_code(
+      'OC_KEY_ARGUMENT_UNQUOTED', 3, 'All key arguments of a list should be ' +
+        'quoted (%s is not)')
 
   # def post_validate(self, ctx, modules):
 
@@ -519,3 +526,32 @@ def v_chk_standard_grouping_naming(ctx, statement):
       cfg_container = container
     elif container.arg == "state":
       state_container = container
+
+def v_pre_module_checks(ctx, statement):
+  """
+    Validation functions that can only be run against the raw
+    YANG, prior to pyang parsing it. Some attributes of the
+    text file get lost - for example, quotations. This check
+    is inefficient since it re-opens the file and reads it,
+    but it allows us to check these
+  """
+  try:
+    fh = open(statement.pos.ref, 'r')
+  except IOError:
+    sys.stderr.write("WARNING: unable to open module %s for OpenConfig validation\n")
+
+  key_re = re.compile("^([ ]+)key([ ]+)(?P<arg>.*);$")
+  quoted_re = re.compile('^\".*\"$')
+
+  ln_count = 0
+  for l in fh.readlines():
+    ln_count += 1
+    l = l.rstrip("\n")
+    if key_re.match(l):
+      arg_part = key_re.sub('\g<arg>', l)
+      if not quoted_re.match(arg_part):
+        # Because we are not reading the file like pyang does, then
+        # we do not have an existing position object, so fake one.
+        pos = error.Position(statement.pos.ref)
+        pos.line = ln_count
+        err_add(ctx.errors, pos, 'OC_KEY_ARGUMENT_UNQUOTED', arg_part)
