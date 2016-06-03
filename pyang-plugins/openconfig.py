@@ -543,20 +543,26 @@ def v_preinit_module_checks(ctx, statement):
   """
     Validation functions that can only be run against the raw
     YANG, prior to pyang parsing it. Some attributes of the
-    text file get lost - for example, quotations. This check
-    is inefficient since it re-opens the file and reads it,
-    but it allows us to check these
+    text file get lost - for example, quotations.
   """
-  try:
-    fh = open(statement.pos.ref, 'r')
-  except IOError:
-    sys.stderr.write("WARNING: unable to open module %s for OpenConfig validation\n")
+
+  handle = None
+  for mod in ctx.repository.get_modules_and_revisions(ctx):
+    if mod[0] == statement.arg:
+      handle = mod
+
+  if handle is not None:
+    module = ctx.repository.get_module_from_handle(handle[2])
+    module_lines = module[2].split("\n")
+  else:
+    sys.stderr.write("WARNING: could not locate module %s in open modules\n" % statement.arg)
+    return
 
   key_re = re.compile("^([ ]+)key([ ]+)(?P<arg>.*);$")
   quoted_re = re.compile('^\".*\"$')
 
   ln_count = 0
-  for l in fh.readlines():
+  for l in module_lines:
     ln_count += 1
     l = l.rstrip("\n")
     if key_re.match(l):
@@ -567,4 +573,4 @@ def v_preinit_module_checks(ctx, statement):
         pos = error.Position(statement.pos.ref)
         pos.line = ln_count
         err_add(ctx.errors, pos, 'OC_KEY_ARGUMENT_UNQUOTED', arg_part)
-  fh.close()
+  #fh.close()
