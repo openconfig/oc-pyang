@@ -78,33 +78,45 @@ class OpenConfigPlugin(lint.LintPlugin):
             'RFC 6087: 4.1: '
             + 'no module name prefix used, suggest %s-%s')
 
-    # add the OpenConfig validators
 
-    statements.add_validation_fun(
-      'init2', ['module'],
-      lambda ctx, s: v_pre_module_checks(ctx, s))
+    # Add OpenConfig validation phase
+    statements.add_validation_phase('preinit', before='init')
+
+    # Add an expensive function which we call one per module to check
+    # things that cannot be checked in the later phases (e.g., text
+    # conventions).
+    statements.add_validation_fun('preinit', ['module'],
+      lambda ctx, s: v_preinit_module_checks(ctx, s))
+
+    # add the OpenConfig validators
 
     # Check for all type statements
     statements.add_validation_fun(
       'type_2', ['type', 'identity', 'identityref'],
       lambda ctx, s: v_chk_octypes(ctx, s))
 
+    # Checks module properties after the module has
+    # been parsed
     statements.add_validation_fun(
       'type_2', ['module'],
       lambda ctx, s: v_chk_ocmodule(ctx, s))
 
+    # Check for warnings that are style-guide specific
     statements.add_validation_fun(
       'type_2', ['presence', 'choice', 'feature', 'if-feature'],
       lambda ctx, s: v_styleguide_warnings(ctx, s))
 
+    # Check properties that are related to data elements
     statements.add_validation_fun(
       'type_2', ['leaf', 'leaf-list', 'list', 'container'],
       lambda ctx, s: v_chk_data_elements(ctx, s))
 
+    # Check grouping names
     statements.add_validation_fun(
       'type_2', ['container'],
       lambda ctx, s: v_chk_standard_grouping_naming(ctx, s))
 
+    # Check the prefix of the module
     statements.add_validation_fun(
       'type_2', ['prefix'],
       lambda ctx, s: v_chk_prefix(ctx, s))
@@ -194,6 +206,7 @@ class OpenConfigPlugin(lint.LintPlugin):
       'List %s is within a container (%s) that has other elements ' +
           'within it: %s')
 
+    # A list does not have an enclosing container
     error.add_error_code(
       'OC_LIST_NO_ENCLOSING_CONTAINER', 3,
       'List %s is directly within a config or state container (%s)')
@@ -238,26 +251,25 @@ class OpenConfigPlugin(lint.LintPlugin):
       'OC_DATA_ELEMENT_INVALID_NAME', 4, 'Invalid naming for element %s ' +
           'data elements should generally be lower-case-with-hypens')
 
+    # the module uses an invalid form of prefix
     error.add_error_code(
       'OC_PREFIX_INVALID', 4, 'Prefix %s for module does not match the ' +
           'expected format - use the form oc-<shortdescription>')
 
+    # the module is missing a standard groupign (e.g., -top)
     error.add_error_code(
       'OC_MISSING_STANDARD_GROUPING', 4, 'Module %s is missing a grouping suffixed ' +
         'with %s')
 
+    # the module has a nonstandard grouping name
     error.add_error_code(
       'OC_GROUPING_NAMING_NONSTANDARD', 4, 'In container %s, grouping %s does not ' +
         'match standard naming - suffix with %s?')
 
+    # key statements do not have quoted arguments
     error.add_error_code(
       'OC_KEY_ARGUMENT_UNQUOTED', 3, 'All key arguments of a list should be ' +
         'quoted (%s is not)')
-
-  # def post_validate(self, ctx, modules):
-
-  #   for module in modules:
-  #     children = [child for child in module.i_children]
 
 def v_chk_octypes(ctx, statement):
   """
@@ -527,7 +539,7 @@ def v_chk_standard_grouping_naming(ctx, statement):
     elif container.arg == "state":
       state_container = container
 
-def v_pre_module_checks(ctx, statement):
+def v_preinit_module_checks(ctx, statement):
   """
     Validation functions that can only be run against the raw
     YANG, prior to pyang parsing it. Some attributes of the
