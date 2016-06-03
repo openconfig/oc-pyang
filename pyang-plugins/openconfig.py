@@ -555,3 +555,4 @@ def v_pre_module_checks(ctx, statement):
         pos = error.Position(statement.pos.ref)
         pos.line = ln_count
         err_add(ctx.errors, pos, 'OC_KEY_ARGUMENT_UNQUOTED', arg_part)
+  fh.close()
