@@ -256,7 +256,7 @@ class OpenConfigPlugin(lint.LintPlugin):
       'OC_PREFIX_INVALID', 4, 'Prefix %s for module does not match the ' +
           'expected format - use the form oc-<shortdescription>')
 
-    # the module is missing a standard groupign (e.g., -top)
+    # the module is missing a standard grouping (e.g., -top)
     error.add_error_code(
       'OC_MISSING_STANDARD_GROUPING', 4, 'Module %s is missing a grouping suffixed ' +
         'with %s')
@@ -552,8 +552,13 @@ def v_preinit_module_checks(ctx, statement):
       handle = mod
 
   if handle is not None:
-    module = ctx.repository.get_module_from_handle(handle[2])
-    module_lines = module[2].split("\n")
+    try:
+      module = ctx.repository.get_module_from_handle(handle[2])
+      module_lines = module[2].split("\n")
+    except (AttributeError, IndexError) as e:
+      sys.stderr.write("WARNING: could not correctly split module %s: %s\n" %
+        (statement.arg, str(e)))
+
   else:
     sys.stderr.write("WARNING: could not locate module %s in open modules\n" % statement.arg)
     return
@@ -573,4 +578,3 @@ def v_preinit_module_checks(ctx, statement):
         pos = error.Position(statement.pos.ref)
         pos.line = ln_count
         err_add(ctx.errors, pos, 'OC_KEY_ARGUMENT_UNQUOTED', arg_part)
-  #fh.close()
