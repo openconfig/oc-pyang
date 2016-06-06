@@ -30,13 +30,14 @@ from pyang import plugin
 from pyang import statements
 from pyang import error
 
+
 def pyang_plugin_init():
     plugin.register_plugin(PathPlugin())
 
 
-class PathPlugin (plugin.PyangPlugin):
+class PathPlugin(plugin.PyangPlugin):
 
-  def add_output_format (self, fmts):
+  def add_output_format(self, fmts):
     self.multiple_modules = True
     fmts['paths'] = self
 
@@ -84,60 +85,64 @@ class PathPlugin (plugin.PyangPlugin):
     g = optparser.add_option_group("paths output specific options")
     g.add_options(optlist)
 
-
-
   def emit(self, ctx, modules, fd):
     modulenames = [m.arg for m in modules]
     if not ctx.opts.ignore_errors:
       for (epos, etag, eargs) in ctx.errors:
-          if (epos.top.arg in modulenames and
-              error.is_error(error.err_level(etag))):
-              raise error.EmitError("%s contains errors" % epos.top.arg)
+        #
+        #  When a module has not yet been parsed then the top.arg does
+        #  not exist. This can be the case when an error is created early
+        #  in the parsing process.
+        #
+        if not hasattr(epos.top, "arg"):
+          raise error.EmitError("%s contains errors, and was not parsed"
+              % (epos.ref))
+        if (epos.top.arg in modulenames and
+                  error.is_error(error.err_level(etag))):
+            raise error.EmitError("%s contains errors" % epos.top.arg)
     emit_paths(ctx, modules, fd)
 
 
-def emit_paths (ctx, modules, fd):
+def emit_paths(ctx, modules, fd):
 
   ctx.opstate_paths = dict()
   for module in modules:
     children = [child for child in module.i_children]
-          #if ch.keyword in statements.data_definition_keywords]
-    if (children):
+    if children:
       if (not ctx.opts.print_plain and not ctx.opts.relocate_output):
-        fd.write ('\nmodule %s:\n' % module.i_modulename)
+        fd.write('\nmodule %s:\n' % module.i_modulename)
       elif ctx.opts.relocate_output:
-        fd.write ('\nmodule %s\n' % module.i_modulename)
+        fd.write('\nmodule %s\n' % module.i_modulename)
       print_children(children, module, fd, ' ', ctx, 1)
-    # contents = str(module)
-    # #fd.write ('%s' % contents)
-    # fd.write ('%s' % module)
 
   if ctx.opts.opstate_paths:
-    fd.write ('\nopstate paths (containing leaves):\n')
+    fd.write('\nopstate paths (containing leaves):\n')
     for (opath, count) in ctx.opstate_paths.iteritems():
-      fd.write (' %s : %d\n' % (opath, count))
+      fd.write(' %s : %d\n' % (opath, count))
 
-  fd.write ('\n')
+  fd.write('\n')
 
-def print_children (children, module, fd, prefix, ctx, level=0):
+
+def print_children(children, module, fd, prefix, ctx, level=0):
   for child in children:
     print_node(child, module, fd, prefix, ctx, level)
 
-def print_node (node, module, fd, prefix, ctx, level=0):
+
+def print_node(node, module, fd, prefix, ctx, level=0):
 
   if node.keyword == 'rpc' or node.keyword == 'notification':
     return
 
   pathstr = statements.mk_path_str(node, True)
   if ctx.opts.strip_namespace:
-    re_ns = re.compile (r'^.+:')
-    #pathstr = re_ns.sub('/', pathstr, 0)
-    path_components = [re_ns.sub('',comp) for comp in pathstr.split('/')]
+    re_ns = re.compile(r'^.+:')
+
+    path_components = [re_ns.sub('', comp) for comp in pathstr.split('/')]
     pathstr = '/'.join(path_components)
   # annotate the leaf nodes only
-  if node.keyword == 'leaf-list' or (node.keyword == 'leaf'
-    and not hasattr(node,'i_is_key')):
-    if node.i_config == True:
+  if node.keyword == 'leaf-list' or \
+        (node.keyword == 'leaf' and not hasattr(node, 'i_is_key')):
+    if node.i_config is True:
       config = "rw"
     else:
       config = "ro"
@@ -150,27 +155,27 @@ def print_node (node, module, fd, prefix, ctx, level=0):
   else:
       config = None
 
-  pathstr = get_pathstr (pathstr, config, ctx, level)
+  pathstr = get_pathstr(pathstr, config, ctx, level)
 
-  fd.write (pathstr)
+  fd.write(pathstr)
 
   if ctx.opts.include_keyword:
-    fd.write (' [%s]' % node.keyword)
+    fd.write(' [%s]' % node.keyword)
 
-  # fd.write (' %s' % module.i_modulename)
-
-  fd.write ('\n')
+  fd.write('\n')
 
   if hasattr(node, 'i_children'):
     level += 1
     if ctx.opts.root_only:
-      if level > 1: return
+      if level > 1:
+        return
     if node.keyword in ['choice', 'case']:
         print_children(node.i_children, module, fd, prefix, ctx, level)
     else:
         print_children(node.i_children, module, fd, prefix, ctx, level)
 
-def get_pathstr (pathstr, config, ctx, level):
+
+def get_pathstr(pathstr, config, ctx, level):
 
   if ctx.opts.print_plain or ctx.opts.relocate_output:
     return pathstr
