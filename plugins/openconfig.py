@@ -111,11 +111,6 @@ class OpenConfigPlugin(lint.LintPlugin):
       'type_2', ['leaf', 'leaf-list', 'list', 'container'],
       lambda ctx, s: v_chk_data_elements(ctx, s))
 
-    # Check grouping names
-    statements.add_validation_fun(
-      'type_2', ['container'],
-      lambda ctx, s: v_chk_standard_grouping_naming(ctx, s))
-
     # Check the prefix of the module
     statements.add_validation_fun(
       'type_2', ['prefix'],
@@ -375,7 +370,6 @@ def v_chk_opstate_paths(ctx, statement):
   """
 
   pathstr = statements.mk_path_str(statement, False)
-  # print "examining path to %s: %s" % (statement.arg, pathstr)
 
   # leaves that are list keys are exempt from this check.  YANG
   # requires them at the top level of the list, i.e., not allowed
@@ -388,7 +382,6 @@ def v_chk_opstate_paths(ctx, statement):
     # print "leaf %s is a key, skipping" % statement.arg
     return
 
-  #path_elements = [c.encode('ascii', 'ignore') for c in yangpath.split_paths(pathstr)]
   path_elements = yangpath.split_paths(pathstr)
   # count number of 'config' and 'state' elements in the path
   confignum = path_elements.count('config')
@@ -400,19 +393,25 @@ def v_chk_opstate_paths(ctx, statement):
   # for elements in a config or state container, make sure they have the
   # correct config property
   if statement.parent.keyword == 'container':
-    # print "%s %s in container: %s (%s)" % (statement.keyword, pathstr,
-    #  str(statement.parent.arg), statement.i_config)
     if statement.parent.arg == 'config':
       if statement.i_config is False:
         err_add(ctx.errors, statement.pos, 'OC_OPSTATE_CONFIG_PROPERTY',
           (statement.arg, 'config', 'true'))
-    elif statement.parent.arg == 'state' or statement.parent.arg == 'counters':
+    elif statement.parent.arg == 'state':
       if statement.i_config is True:
         err_add(ctx.errors, statement.parent.pos, 'OC_OPSTATE_CONFIG_PROPERTY',
           (statement.arg, 'state', 'false'))
     else:
-      err_add(ctx.errors, statement.pos, 'OC_OPSTATE_CONTAINER_NAME',
-      (statement.arg, pathstr))
+      valid_enclosing_state = False
+      if statement.i_config is False:
+        # Allow nested containers within a state container
+        path_elements = yangpath.split_paths(pathstr)
+        if u"state" in path_elements:
+          valid_enclosing_state = True
+
+      if valid_enclosing_state is False:
+        err_add(ctx.errors, statement.pos, 'OC_OPSTATE_CONTAINER_NAME',
+          (statement.arg, pathstr))
 
 
 def v_chk_leaf_mirroring(ctx, statement):
@@ -501,6 +500,13 @@ def v_chk_list_placement(ctx, statement):
         ", ".join(remaining_parent_substmts)))
 
 def v_styleguide_warnings(ctx, statement):
+  """
+    Validate a module against the requirements specified in the
+    OpenConfig style guide. This includes:
+      - Not using the choice statement
+      - Not using the presence keyword
+      - Not using feature statements
+ """
   if statement.keyword == 'choice':
     err_add(ctx.errors, statement.pos, 'OC_STYLE_AVOID_CHOICE',
       (statement.arg))
@@ -515,29 +521,22 @@ def v_styleguide_warnings(ctx, statement):
       (statement.parent.arg))
 
 def v_chk_data_elements(ctx, statement):
+  """
+    Validate data elements with a particular set of rules for OpenConfig
+    rules.
+ """
   if not re.match("^[A-Za-z0-9\-]+$", statement.arg):
     err_add(ctx.errors, statement.pos, 'OC_DATA_ELEMENT_INVALID_NAME',
       statement.arg)
 
 def v_chk_prefix(ctx, statement):
+  """
+    Validation rules relating to the prefix statement
+  """
   if not re.match("^oc\-[a-z\-]+$", statement.arg) and \
         "openconfig-" in statement.arg:
     err_add(ctx.errors, statement.pos, 'OC_PREFIX_INVALID',
       statement.arg)
-
-def v_chk_standard_grouping_naming(ctx, statement):
-
-  # we don't want to check 'config' or 'state' containers
-  if statement.arg in ['config', 'state']:
-    return
-
-  cfg_container, state_container = None, None
-  containers = statement.search('container')
-  for container in containers:
-    if container.arg == "config":
-      cfg_container = container
-    elif container.arg == "state":
-      state_container = container
 
 def v_preinit_module_checks(ctx, statement):
   """
