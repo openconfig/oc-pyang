@@ -35,6 +35,13 @@ from util import yangpath
 INSTANTIATED_DATA_KEYWORDS = ['leaf', 'leaf-list', 'container', 'list',
                                 'choice']
 
+COMMON_IMPORT_PREFIXES = {
+  "openconfig-extensions": "oc-ext",
+  "openconfig-types": "oc-types",
+  "ietf-inet-types": "inet",
+  "ietf-yang-types": "yang",
+}
+
 def pyang_plugin_init():
   plugin.register_plugin(OpenConfigPlugin())
 
@@ -115,6 +122,11 @@ class OpenConfigPlugin(lint.LintPlugin):
     statements.add_validation_fun(
       'type_2', ['prefix'],
       lambda ctx, s: v_chk_prefix(ctx, s))
+
+    # Check characteristics relating to the import stmt
+    statements.add_validation_fun(
+      'type_2', ['import'],
+      lambda ctx, s: v_chk_import(ctx, s))
 
     # Checks relevant to placement of leaves and leaf lists within the
     # opstate structure
@@ -265,6 +277,11 @@ class OpenConfigPlugin(lint.LintPlugin):
     error.add_error_code(
       'OC_KEY_ARGUMENT_UNQUOTED', 3, 'All key arguments of a list should be ' +
         'quoted (%s is not)')
+
+    # an uncommon prefix was used for a common import
+    error.add_error_code(
+      'OC_UNCOMMON_PREFIX_USED', 3, 'A different prefix (%s) was used for a ' +
+        'common module (%s), suggest using %s instead.')
 
 def v_chk_octypes(ctx, statement):
   """
@@ -577,3 +594,15 @@ def v_preinit_module_checks(ctx, statement):
         pos = error.Position(statement.pos.ref)
         pos.line = ln_count
         err_add(ctx.errors, pos, 'OC_KEY_ARGUMENT_UNQUOTED', arg_part)
+
+def v_chk_import(ctx, statement):
+  """
+    Validation function run against import statements.
+  """
+  arg = getattr(statement, "arg", None)
+  if arg is not None and arg in COMMON_IMPORT_PREFIXES:
+    prefix = statement.search_one('prefix')
+    if prefix is not None and not prefix.arg == COMMON_IMPORT_PREFIXES[arg]:
+      err_add(ctx.errors, statement.pos, 'OC_UNCOMMON_PREFIX_USED', (prefix.arg,
+        arg, COMMON_IMPORT_PREFIXES[arg]))
+
