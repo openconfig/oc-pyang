@@ -149,7 +149,7 @@ class HTMLHelper:
     id = re.sub(r'[ /]', r'-', text)
     return (id.lower().strip())
 
-def get_attr_str (attrs):
+def get_attr_str(attrs):
   elem_attrs = []
   for attr_val in attrs.items():
     elem_attrs.append("%s=\"%s\"" % attr_val)

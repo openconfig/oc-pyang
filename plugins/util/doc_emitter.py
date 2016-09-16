@@ -22,7 +22,7 @@ from collections import OrderedDict
 
 class DocEmitter:
 
-  def __init__ (self):
+  def __init__(self):
     self.path_only = []
     # moduledocs is an ordered, nested map that contains an entry
     # for each part of a module's documentation, keyed
@@ -44,7 +44,7 @@ class DocEmitter:
     """
     pass
 
-  def emitDocs (self, ctx, section=None):
+  def emitDocs(self, ctx, section=None):
     """Returns the documentation for the full module or, optionally,
     the specified section of a module.  If specified, section should be
     one of: "module", "typedefs", "identities", or "data" """

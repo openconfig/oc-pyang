@@ -42,6 +42,11 @@ body {
    color: #01579B;
 }
 
+.statement-path {
+  color: #455A64;
+  font-size: 75%;
+}
+
 .module-type-text-label {
   font-weight: bold;
 

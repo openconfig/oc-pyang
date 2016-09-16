@@ -72,13 +72,13 @@ class HTMLEmitter(DocEmitter):
 
       for (typename, td) in mod.typedefs.iteritems():
         types_div += ht.h4(typename,{"class":"module-type-name","id":"type-" + ht.gen_html_id(typename)},2,True)
+        types_div += ht.para(ht.add_tag("span","description:" + ht.br(newline=True), {"class":"module-type-text-label"}) + td.attrs['desc'],{"class":"module-type-text"},2,True)
         types_div += gen_type_info(td.typedoc, 2)
 
         for prop in YangDocDefs.type_leaf_properties:
           if td.attrs.has_key(prop):
             types_div += ht.para(ht.add_tag("span", prop,{"class":"module-type-text-label"}) + ": " + td.attrs[prop],{"class":"module-type-text"},2,True)
 
-        types_div += ht.para(ht.add_tag("span","description:" + ht.br(newline=True), {"class":"module-type-text-label"}) + td.attrs['desc'],{"class":"module-type-text"},2,True)
 
       types_div += ht.close_tag(newline=True)
     else:
@@ -99,14 +99,15 @@ class HTMLEmitter(DocEmitter):
 
         # collect all of the identities that have base_id as
         # their base
+        # TODO(aashaikh): this needs to be updated to handle nested identities / multiple inheritance
         derived = { key:value for key,value in mod.identities.items() if value.attrs['base'] == base_id }
         # emit the identities derived from the current base
         for (idname, id) in derived.iteritems():
           idents_div += ht.h4(idname,{"class":"module-type-name","id":"ident-" + ht.gen_html_id(idname)},2,True)
+          idents_div += ht.para(ht.add_tag("span","description:",{"class":"module-type-text-label"}) + ht.br(newline=True) + id.attrs['desc'],{"class":"module-type-text"},2,True)
           idents_div += ht.para(ht.add_tag("span", "base identity: ",{"class":"module-type-text-label"})
             + ht.add_tag("a", id.attrs['base'],{"href":"#ident-"+ht.gen_html_id(id.attrs['base'])}),
             {"class":"module-type-text"},2,True)
-          idents_div += ht.para(ht.add_tag("span","description:",{"class":"module-type-text-label"}) + ht.br(newline=True) + id.attrs['desc'],{"class":"module-type-text"},2,True)
 
         idents_div += ht.close_tag(newline=True)
     else:
@@ -141,8 +142,11 @@ class HTMLEmitter(DocEmitter):
       s_div += ht.close_tag(newline=True)
       return s_div
 
-    # statement name and nodetype
-    s_div += ht.h4(statement.name, {"class":"statement-name","id":node_to_id(statement)},level,True)
+    # statement path and name
+    (prefix, last) = yangpath.remove_last(pathstr)
+    prefix_name = ht.add_tag("span", prefix + "/", {"class":"statement-path"})
+    statement_name = prefix_name + ht.br(level,True) + statement.name
+    s_div += ht.h4(statement_name, {"class":"statement-name","id":node_to_id(statement)},level,True)
 
     # node description
     if statement.attrs.has_key('desc'):
@@ -181,12 +185,12 @@ class HTMLEmitter(DocEmitter):
     navs = []
     navids = []
     # create the documentation elements for each module
-    for module_name in self.moduledocs.keys():
+    for module_name in self.moduledocs:
       # check if the module has no data nodes
       if 'data' not in self.moduledocs[module_name]:
         self.moduledocs[module_name]['data'] = ""
       else:
-        # create the header for th e data elements
+        # create the header for the data elements
         hdr = ht.h3("Data elements", {"class":"module-types-header", "id":module_name + "-data"},2,True)
         self.moduledocs[module_name]['data'] = hdr + self.moduledocs[module_name]['data']
 
@@ -201,7 +205,9 @@ class HTMLEmitter(DocEmitter):
         navids.append(self.moduledocs[module_name]['navid'])
 
     if ctx.opts.doc_title is None:
-      doc_title = self.moduledocs.keys()[0]
+      # just use the name of the first module returned by the dict if no title
+      # is supplied
+      doc_title = self.moduledocs.iterkeys().next()
     else:
       doc_title = ctx.opts.doc_title
 
@@ -209,7 +215,7 @@ class HTMLEmitter(DocEmitter):
 
     return s
 
-def gen_type_info (typedoc, level=1):
+def gen_type_info(typedoc, level=1):
   """Create and return documentation based on the type.  Expands compound
   types."""
 
@@ -268,7 +274,7 @@ def populate_template(title, docs, navs, nav_ids):
                         'menus': navs,
                         'menu_ids': nav_ids })
 
-def gen_nav_tree (emitter, root_mod, level=0):
+def gen_nav_tree(emitter, root_mod, level=0):
   """Generate a list structure to serve as navigation for the
   module.  root_mod is a top-level ModuleDoc object"""
 
@@ -324,7 +330,7 @@ def gen_nav_tree (emitter, root_mod, level=0):
   #modtop.nav += "</ul>"
   # top.nav += "<li>" + statement.name + "</li>\n"
 
-def gen_nav (node, root_mod, level = 0):
+def gen_nav(node, root_mod, level = 0):
   """Add the list item for node (StatementDoc object)"""
 
   # print "nav: %s %s (%d)" % (node.keyword, node.name, len(node.children))
@@ -347,14 +353,14 @@ def gen_nav (node, root_mod, level = 0):
 
   return nav
 
-def text_to_paragraphs (textblock):
+def text_to_paragraphs(textblock):
   """Simple conversion of text into paragraphs based (naively) on blank
   lines -- intended to use with long, multi-paragraph descriptions"""
 
   paras = textblock.split("\n\n")
   return paras
 
-def node_to_id (node):
+def node_to_id(node):
   """Given a node, return a string suitable as an HTML id attribute based on the
   node's path"""
 

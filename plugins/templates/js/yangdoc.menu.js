@@ -1,6 +1,7 @@
 // MIT License
 //
-// Copyright (c) 2015 Sean Wessell
+// Original work Copyright (c) 2015 Sean Wessell
+// Modifications (c) 2015 Google, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -21,7 +22,7 @@
 // SOFTWARE.
 //
 //
-// Obtained from bootsnipp.com
+// Original work may be obtained from bootsnipp.com
 // http://bootsnipp.com/SeanWessell/snippets/ypNAe
 
 $.fn.extend({
@@ -61,14 +62,7 @@ $.fn.extend({
         $(this).closest('li').click();
     });
   });
-    //fire event to open branch if the li contains an anchor instead of text
-    // tree.find('.branch>a').each(function () {
-    //     $(this).on('click', function (e) {
-    //         $(this).closest('li').click();
-    //         e.preventDefault();
-    //     });
-    // });
-    //fire event to open branch if the li contains a button instead of text
+
     tree.find('.branch>button').each(function () {
         $(this).on('click', function (e) {
             $(this).closest('li').click();
@@ -78,10 +72,4 @@ $.fn.extend({
 }
 });
 
-
-//Initialization of treeviews
-
-// $( document ).ready(function() {
-//     $('#tree-openconfig-bgp-types').treed();
-// });
 
