@@ -1,0 +1,99 @@
+/*
+* Copyright 2015 Google, Inc.
+*
+* Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License.
+* You may obtain a copy of the License at
+*
+*   http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+*
+*/
+
+h1, h2, h3, h4, h5, p {
+  color: #455A64;
+}
+
+body {
+  position: relative;
+}
+
+.module-name {
+}
+
+.module-desc-header {
+  font-weight: bold;
+}
+
+.module-desc-text {
+  // font-family: courier;
+}
+
+.module-types-header {
+
+}
+
+.module-type-name, .statement-name {
+   color: #01579B;
+}
+
+.statement-path {
+  color: #455A64;
+  font-size: 75%;
+}
+
+.module-type-text-label {
+  font-weight: bold;
+
+}
+
+.module-type-text {
+
+}
+
+.statement-section {
+  border-top: 1px solid gray;
+  margin-bottom: 10px;
+  margin: 10px 0px;
+}
+
+//.statement-name {
+//
+//}
+
+.statement-info-label {
+  font-weight: bold;
+}
+
+p.statement-info-text {
+  margin-bottom: 4px;
+
+}
+
+li a.menu-module-name {
+  color: #727272;
+}
+
+
+/* styles for scrolling nav and data panels */
+@media (min-width: 768px) {
+  .sidebar {
+    position: fixed;
+    top: 21px;
+    bottom: 0;
+    left: 0;
+    z-index: 1000;
+    display: block;
+    overflow-x: hidden;
+    overflow-y: auto; /* Scrollable contents if viewport is shorter than content. */
+    background-color: #f5f5f5;
+    border-right: 1px solid #eee;
+  }
+}
+
+
