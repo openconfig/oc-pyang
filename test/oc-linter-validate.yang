@@ -9,6 +9,7 @@ module oc-linter-validate {
 
   // import some basic types
   import openconfig-extensions { prefix oc-ext; }
+  import ietf-yang-types { prefix "fish"; }
 
   // meta
   organization "OpenConfig working group";
