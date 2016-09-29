@@ -68,6 +68,34 @@ class ModuleType(Enum):
   OC = 3
 
 
+class ExternalValidationRules(object):
+  required_substatements = {
+      "module": (("contact", "organization", "description", "revision"),
+                 "RFC 6087: 4.7"),
+      "submodule": (("contact", "organization", "description", "revision"),
+                    "RFC 6087: 4.7"),
+      # This rule is explicitly disabled because it is violated by
+      # iana-if-types
+      # "revision":(("reference",), "RFC 6087: 4.7"),
+      "extension": (("description",), "RFC 6087: 4.12"),
+      "feature": (("description",), "RFC 6087: 4.12"),
+      # This rule is explicitly disabled, because it is violated by
+      # iana-if-types
+      # "identity":(("description",), "RFC 6087: 4.12"),
+      "typedef": (("description",), "RFC 6087: 4.11,4.12"),
+      "grouping": (("description",), "RFC 6087: 4.12"),
+      "augment": (("description",), "RFC 6087: 4.12"),
+      "rpc": (("description",), "RFC 6087: 4.12"),
+      "notification": (("description",), "RFC 6087: 4.12,4.14"),
+      "container": (("description",), "RFC 6087: 4.12"),
+      "leaf": (("description",), "RFC 6087: 4.12"),
+      "leaf-list": (("description",), "RFC 6087: 4.12"),
+      "list": (("description",), "RFC 6087: 4.12"),
+      "choice": (("description",), "RFC 6087: 4.12"),
+      "anyxml": (("description",), "RFC 6087: 4.12"),
+  }
+
+
 # Register the OpenConfig plugin with pyang
 def pyang_plugin_init():
   plugin.register_plugin(OpenConfigPlugin())
@@ -100,20 +128,89 @@ class OpenConfigPlugin(lint.LintPlugin):
     if not ctx.opts.openconfig:
       return
     if not ctx.opts.openconfig_only:
-      # Set up the standard Pyang linter if we are not only running
-      self._setup_ctx(ctx)
-    else:
-      # Functions that are re-used from the existing Pyang lint module
+      # Support IETF as a prefix for modules
+      self.modulename_prefixes.extend(["ietf", "iana"])
+
+      # We do not want all RFC6087 rules, so we need to borrow some
+      # from the standard linter. We cannot simply call the _setup_ctx
+      # module as this adds rules that we do not want - this code block
+      # is borrowed from that module.
+      statements.add_validation_var(
+          "$chk_default",
+          lambda keyword: keyword in lint._keyword_with_default)
+      statements.add_validation_var(
+          "$chk_required",
+          lambda keyword: keyword in
+          ExternalValidationRules.required_substatements)
+
+      statements.add_validation_var(
+          "$chk_recommended",
+          lambda keyword: keyword in lint._recommended_substatements)
+
+      statements.add_validation_fun(
+          "grammar", ["$chk_default"],
+          lambda ctx, s: lint.v_chk_default(ctx, s))
+      statements.add_validation_fun(
+          "grammar", ["$chk_required"],
+          lambda ctx, s: lint.v_chk_required_substmt(ctx, s))
+      statements.add_validation_fun(
+          "grammar", ["$chk_recommended"],
+          lambda ctx, s: lint.v_chk_recommended_substmt(ctx, s))
+
+      statements.add_validation_fun(
+          "grammar", ["namespace"],
+          lambda ctx, s: lint.v_chk_namespace(ctx, s,
+                                              self.namespace_prefixes))
+
       statements.add_validation_fun(
           "grammar", ["module", "submodule"],
-          lambda ctx, s: lint.v_chk_module_name(ctx, s,
-                                                self.modulename_prefixes))
+          lambda ctx, s:
+          lint.v_chk_module_name(ctx, s, self.modulename_prefixes))
 
-      # Add the error code for a bad module name or prefix
+      statements.add_validation_fun(
+          "strict", ["include"],
+          lambda ctx, s: lint.v_chk_include(ctx, s))
+
+      # Register the default linter error codes
       error.add_error_code(
-          "LINT_BAD_MODULENAME_PREFIX", ErrorLevel.WARNING,
+          "LINT_EXPLICIT_DEFAULT", ErrorLevel.WARNING,
+          "RFC 6087: 4.3: "
+          "statement \"%s\" is given with its default value \"%s\"")
+      error.add_error_code(
+          "LINT_MISSING_REQUIRED_SUBSTMT", ErrorLevel.MINOR,
+          "%s: "
+          "statement \"%s\" must have a \"%s\" substatement")
+      error.add_error_code(
+          "LINT_MISSING_RECOMMENDED_SUBSTMT", ErrorLevel.WARNING,
+          "%s: "
+          "statement \"%s\" should have a \"%s\" substatement")
+      error.add_error_code(
+          "LINT_BAD_NAMESPACE_VALUE", ErrorLevel.WARNING,
+          "RFC 6087: 4.8: namespace value should be \"%s\"")
+      error.add_error_code(
+          "LINT_BAD_MODULENAME_PREFIX_1", ErrorLevel.WARNING,
           "RFC 6087: 4.1: "
-          "no module name prefix used, suggest %s-%s")
+          "the module name should start with the string %s")
+      error.add_error_code(
+          "LINT_BAD_MODULENAME_PREFIX_N", ErrorLevel.WARNING,
+          "RFC 6087: 4.1: "
+          "the module name should start with one of the strings %s")
+      error.add_error_code(
+          "LINT_NO_MODULENAME_PREFIX", ErrorLevel.WARNING,
+          "RFC 6087: 4.1: "
+          "no module name prefix string used")
+      error.add_error_code(
+          "LINT_BAD_REVISION", ErrorLevel.MINOR,
+          "RFC 6087: 4.6: "
+          "the module's revision %s is older than "
+          "submodule %s's revision %s")
+      error.add_error_code(
+          "LINT_TOP_MANDATORY", ErrorLevel.MINOR,
+          "RFC 6087: 4.9: "
+          "top-level node %s must not be mandatory")
+      error.add_error_code(
+          "LONG_IDENTIFIER", ErrorLevel.MINOR,
+          "RFC 6087: 4.2: identifier %s exceeds %s characters")
 
     # Add a pre-initialisation phase where we can read the
     # modules before they have been parsed by pyang fully.
@@ -201,6 +298,11 @@ class OpenConfigPlugin(lint.LintPlugin):
         "OC_LIST_SURROUNDING_CONTAINER", ErrorLevel.MAJOR,
         "List %s is within a container (%s) that has other elements "
         "within it: %s")
+
+    # a list that does not have a container above it
+    error.add_error_code(
+        "OC_LIST_NO_ENCLOSING_CONTAINER", ErrorLevel.MAJOR,
+        "List %s does not have a surrounding container")
 
     # a module defines data nodes at the top-level
     error.add_error_code(
@@ -374,6 +476,10 @@ class OCLintStages(object):
       Complete list of functions to be run for the statement.
     """
     functions = []
+    defining_module = stmt.pos.ref.split("/")[-1].split(".")[0]
+    if (OCLintFunctions.is_openconfig_validatable_module(defining_module) not in
+        [ModuleType.OC, ModuleType.OCINFRA]):
+      return []
 
     if u"*" in validation_map:
       functions.extend(validation_map[u"*"])
@@ -459,16 +565,16 @@ class OCLintFunctions(object):
     Avoid validating modules that are not OpenConfig.
 
     Args:
-        mod: the pyang.Statement for the module
+        mod: the text name of the module
 
     Returns:
       An enumerated ModuleType
     """
-    if re.match(r"[a-z0-9]+\-.*", mod.arg.lower()):
+    if re.match(r"[a-z0-9]+\-.*", mod.lower()):
       # Avoid parsing IETF and IANA modules which are currently
       # included by OpenConfig, and avoid parsing the extension
       # module itself.
-      modname_parts = mod.arg.split("-")
+      modname_parts = mod.split("-")
       if unicode(modname_parts[0]) in [u"ietf", u"iana"]:
         return ModuleType.NONOC
       elif unicode(modname_parts[1]) == "extensions":
@@ -493,7 +599,7 @@ class OCLintFunctions(object):
 
     # Don't perform this check for modules that are not OpenConfig
     # or are OpenConfig infrastructure (e.g., extensions)
-    if (OCLintFunctions.is_openconfig_validatable_module(stmt) in
+    if (OCLintFunctions.is_openconfig_validatable_module(stmt.arg) in
         [ModuleType.NONOC, ModuleType.OCINFRA]):
       return
 
@@ -655,11 +761,15 @@ class OCLintFunctions(object):
       stmt: pyang.Statement for the list
     """
 
-    parent_substmts = [i.arg for i in stmt.parent.substmts
+    parent_substmts = [i.arg for i in stmt.parent.i_children
                        if i.keyword in INSTANTIATED_DATA_KEYWORDS]
 
+    if stmt.parent.keyword != "container":
+      err_add(ctx.errors, stmt.parent.pos,
+              "OC_LIST_NO_ENCLOSING_CONTAINER", stmt.arg)
+
     if parent_substmts != [stmt.arg]:
-      remaining_parent_substmts = [i.arg for i in stmt.parent.substmts
+      remaining_parent_substmts = [i.arg for i in stmt.parent.i_children
                                    if i.arg != stmt.arg and i.keyword
                                    in INSTANTIATED_DATA_KEYWORDS]
       err_add(ctx.errors, stmt.parent.pos,
@@ -769,7 +879,7 @@ class OCLintFunctions(object):
 
     # Don't perform this check for modules that are not OpenConfig
     # or are OpenConfig infrastructure (e.g., extensions)
-    if (OCLintFunctions.is_openconfig_validatable_module(stmt) in
+    if (OCLintFunctions.is_openconfig_validatable_module(stmt.arg) in
         [ModuleType.NONOC, ModuleType.OCINFRA]):
       return
 
