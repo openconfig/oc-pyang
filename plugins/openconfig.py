@@ -1,5 +1,4 @@
-"""
-Copyright 2016 The OpenConfig Authors.
+"""Copyright 2016 The OpenConfig Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -20,560 +19,765 @@ This checker is derived from the standard pyang lint plugin which also checks
 modules according the YANG usage guidelines in RFC 6087.
 """
 
-import optparse
-import sys
-import os.path
-import re
+from __future__ import print_function
 
+from enum import Enum
+import optparse
+import os.path
+from pyang import error
 from pyang import plugin
 from pyang import statements
-from pyang import error
 from pyang.error import err_add
 from pyang.plugins import lint
+import re
+
 from util import yangpath
 
-INSTANTIATED_DATA_KEYWORDS = ['leaf', 'leaf-list', 'container', 'list',
-                                'choice']
+# Keywords which result in data nodes being created in a YANG tree
+INSTANTIATED_DATA_KEYWORDS = [u"leaf", u"leaf-list", u"container", u"list",
+                              u"choice"]
+LEAFNODE_KEYWORDS = [u"leaf", u"leaf-list"]
 
+
+class ErrorLevel(Enum):
+  """An enumeration of the Pyang error levels.
+
+     - Critical errors are those that are fatal for parsing.
+     - Major errors are used as those that cannot be suppressed, and
+       should result in the module failing submission checks.
+     - Minor errors are used as those that can be suppressed, if there
+       is a clear reason to break a convention.
+     - Warnings are simply statements that the user should be aware of
+       and should not result in submission failures.
+  """
+  CRITICAL = 1
+  MAJOR = 2
+  MINOR = 3
+  WARNING = 4
+
+
+class ModuleType(Enum):
+  """An enumeration describing the type of module.
+
+    OCINFRA: A model that does not need to be validated.
+    NONOC: A non-OpenConfig model.
+    OC: An OpenConfig model.
+  """
+  OCINFRA = 1
+  NONOC = 2
+  OC = 3
+
+
+# Register the OpenConfig plugin with pyang
 def pyang_plugin_init():
   plugin.register_plugin(OpenConfigPlugin())
 
+
 class OpenConfigPlugin(lint.LintPlugin):
+  """Plugin for Pyang to validate OpenConfig style guide conventions."""
 
   def __init__(self):
     lint.LintPlugin.__init__(self)
-    self.modulename_prefixes = ['openconfig']
+    self.modulename_prefixes = ["openconfig"]
 
   def add_opts(self, optparser):
     optlist = [
-          optparse.make_option("--openconfig",
-                                dest="openconfig",
-                                action="store_true",
-                                help="""Validate the module(s) according to
-                                OpenConfig conventions"""),
-          optparse.make_option("--oc-only",
-                                dest="openconfig_only",
-                                action="store_true",
-                                help="""Do not include standard lint (RFC 6087)
-                                checking"""),
-          ]
+        optparse.make_option("--openconfig",
+                             dest="openconfig",
+                             action="store_true",
+                             help="""Validate the module(s) according to
+                             OpenConfig conventions"""),
+        optparse.make_option("--oc-only",
+                             dest="openconfig_only",
+                             action="store_true",
+                             help="""Do not include standard lint (RFC 6087)
+                             checking"""),
+        ]
     g = optparser.add_option_group("OpenConfig specific options")
     g.add_options(optlist)
 
   def setup_ctx(self, ctx):
-    if not (ctx.opts.openconfig):
+    if not ctx.opts.openconfig:
       return
-    if (not ctx.opts.openconfig_only):
-      # call the standard linter setup
+    if not ctx.opts.openconfig_only:
+      # Set up the standard Pyang linter if we are not only running
       self._setup_ctx(ctx)
     else:
-      # don't call standard linter but have to set up some of the same rules
-      # ourselves
+      # Functions that are re-used from the existing Pyang lint module
       statements.add_validation_fun(
-        'grammar', ['module', 'submodule'],
-        lambda ctx, s: lint.v_chk_module_name(ctx, s, self.modulename_prefixes))
+          "grammar", ["module", "submodule"],
+          lambda ctx, s: lint.v_chk_module_name(ctx, s,
+                                                self.modulename_prefixes))
 
+      # Add the error code for a bad module name or prefix
       error.add_error_code(
-            'LINT_BAD_MODULENAME_PREFIX', 4,
-            'RFC 6087: 4.1: '
-            + 'no module name prefix used, suggest %s-%s')
+          "LINT_BAD_MODULENAME_PREFIX", ErrorLevel.WARNING,
+          "RFC 6087: 4.1: "
+          "no module name prefix used, suggest %s-%s")
 
+    # Add a pre-initialisation phase where we can read the
+    # modules before they have been parsed by pyang fully.
+    statements.add_validation_phase("preinit", before="init")
+    statements.add_validation_fun("preinit", ["*"],
+                                  OCLintStages.preinitialisation)
 
-    # Add OpenConfig validation phase
-    statements.add_validation_phase('preinit', before='init')
+    # Add an openconfig types validation phase where we can
+    # get types and then validate them further.
+    statements.add_validation_phase("openconfig_type", after="type_2")
+    statements.add_validation_fun("openconfig_type", ["*"],
+                                  OCLintStages.openconfig_type)
 
-    # Add an expensive function which we call one per module to check
-    # things that cannot be checked in the later phases (e.g., text
-    # conventions).
-    statements.add_validation_fun('preinit', ['module'],
-      lambda ctx, s: v_preinit_module_checks(ctx, s))
+    # pyang manipulates the paths of elements during reference_2, such
+    # that this is the only time that we get a chance to work
+    statements.add_validation_fun("reference_2", ["*"],
+                                  OCLintStages.openconfig_reference)
 
-    # add the OpenConfig validators
-
-    # Check for all type statements
-    statements.add_validation_fun(
-      'type_2', ['type', 'identity', 'identityref'],
-      lambda ctx, s: v_chk_octypes(ctx, s))
-
-    # Checks module properties after the module has
-    # been parsed
-    statements.add_validation_fun(
-      'type_2', ['module'],
-      lambda ctx, s: v_chk_ocmodule(ctx, s))
-
-    # Check for warnings that are style-guide specific
-    statements.add_validation_fun(
-      'type_2', ['presence', 'choice', 'feature', 'if-feature'],
-      lambda ctx, s: v_styleguide_warnings(ctx, s))
-
-    # Check properties that are related to data elements
-    statements.add_validation_fun(
-      'type_2', ['leaf', 'leaf-list', 'list', 'container'],
-      lambda ctx, s: v_chk_data_elements(ctx, s))
-
-    # Check the prefix of the module
-    statements.add_validation_fun(
-      'type_2', ['prefix'],
-      lambda ctx, s: v_chk_prefix(ctx, s))
-
-    # Checks relevant to placement of leaves and leaf lists within the
-    # opstate structure
-    statements.add_validation_fun(
-      'reference_2', ['leaf', 'leaf-list'],
-      lambda ctx, s: v_chk_opstate_paths(ctx,s))
-
-    # Checks lists within the structure
-    statements.add_validation_fun(
-      'reference_4', ['list'],
-      lambda ctx, s: v_chk_list_placement(ctx, s))
-
-    # Checks relevant to the specifications of paths in the module
-    statements.add_validation_fun(
-      'reference_2', ['path', 'augment'],
-      lambda ctx, s: v_chk_path_refs(ctx,s))
-
-    # Check that leaves are mirrored between config and state containers
-    statements.add_validation_fun(
-      'reference_4', ['container'],
-      lambda ctx, s: v_chk_leaf_mirroring(ctx,s))
-
-    # add the OpenConfig error codes
-
-    # capitalization of enumeration values
+    # Error type for generic OpenConfig linter bugs - returned
+    # when an error is encountered in linter logic.
     error.add_error_code(
-      'OC_ENUM_CASE', 3,
-      'enum value' + ' "%s" should be all caps as "%s"')
+        "OC_LINTER_ERROR", ErrorLevel.CRITICAL,
+        "Linter error encountered: %s")
 
-    # UPPERCASE_WITH_UNDERSCORES required for enum values
+    # Enum values must be upper case
     error.add_error_code(
-      'OC_ENUM_UNDERSCORES', 3,
-      'enum value ' + '"%s" should be of the form ' +
-      'UPPERCASE_WITH_UNDERSCORES: "%s"')
+        "OC_ENUM_CASE", ErrorLevel.MAJOR,
+        "enum value \"%s\" should be capitalised as \"%s\"")
 
-    # capitalization of identity values
+    # Enum values must be of the form UPPERCASE_WITH_UNDERSCORES
     error.add_error_code(
-      'OC_IDENTITY_CASE', 3,
-      'identity name' + ' "%s" should be all caps as "%s"')
+        "OC_ENUM_UNDERSCORES", ErrorLevel.MAJOR,
+        "enum value \"%s\" should be of the form "
+        "UPPERCASE_WITH_UNDERSCORES: %s")
+
+    # Identity values should be capitalised
+    error.add_error_code(
+        "OC_IDENTITY_CASE", ErrorLevel.MAJOR,
+        "identity name \"%s\" should be capitalised as \"%s\"")
 
     # UPPERCASE_WITH_UNDERSCORES required for identity values
     error.add_error_code(
-      'OC_IDENTITY_UNDERSCORES', 3,
-      'identity name ' + '"%s" should be of the form ' +
-      'UPPERCASE_WITH_UNDERSCORES: "%s"')
+        "OC_IDENTITY_UNDERSCORES", ErrorLevel.MAJOR,
+        "identity name \"%s\" should be of the form "
+        "UPPERCASE_WITH_UNDERSCORES: \"%s\"")
 
-    # single config / state container in the path
+    # There must be a single config / state container in the path
     error.add_error_code(
-      'OC_OPSTATE_CONTAINER_COUNT', 3,
-      'path "%s" should have a single "config" or "state" component')
+        "OC_OPSTATE_CONTAINER_COUNT", ErrorLevel.MAJOR,
+        "path \"%s\" should have a single \"config\" or \"state\" component")
 
-    # leaves should be in a 'config' or 'state' container
+    # Leaves should be in a "config" or "state" container
     error.add_error_code(
-      'OC_OPSTATE_CONTAINER_NAME', 3,
-      'element "%s" at path "%s" should be in a "config" or "state" container')
+        "OC_OPSTATE_CONTAINER_NAME", ErrorLevel.MAJOR,
+        "element \"%s\" at path \"%s\" should be in a \"config\""
+        "or \"state\" container")
 
     # list keys should be leafrefs to respective value in config / state
     error.add_error_code(
-      'OC_OPSTATE_KEY_LEAFREF', 3,
-      'list key "%s" should be type leafref with a reference to corresponding' +
-      ' leaf in config or state container')
+        "OC_OPSTATE_KEY_LEAFREF", ErrorLevel.MAJOR,
+        "list key \"%s\" should be type leafref with a reference to"
+        " the corresponding leaf in config or state container")
 
     # leaves in in config / state should have the correct config property
     error.add_error_code(
-      'OC_OPSTATE_CONFIG_PROPERTY', 3,
-      'element "%s" is in a "%s" container and should have config value %s')
+        "OC_OPSTATE_CONFIG_PROPERTY", ErrorLevel.MAJOR,
+        "element \"%s\" is in a \"%s\" container and should have "
+        "config value %s")
 
     # references to nodes in the same module / namespace should use relative
     # paths
     error.add_error_code(
-      'OC_RELATIVE_PATH', 4,
-      '"%s" path reference "%s" is intra-module but uses absolute path')
+        "OC_RELATIVE_PATH", ErrorLevel.MINOR,
+        "\"%s\" path reference \"%s\" is intra-module but uses absolute path")
 
     # a config leaf does not have a mirrored applied config leaf in the state
     # container
     error.add_error_code(
-      'OC_OPSTATE_APPLIED_CONFIG', 3,
-      '"%s" is not mirrored in the state container at %s')
+        "OC_OPSTATE_APPLIED_CONFIG", ErrorLevel.MAJOR,
+        "\"%s\" is not mirrored in the state container at %s")
 
-    # a list is within a container that has elements other than the list within
-    # it
+    # a list is within a container that has elements other than the list
+    # within it
     error.add_error_code(
-      'OC_LIST_SURROUNDING_CONTAINER', 3,
-      'List %s is within a container (%s) that has other elements ' +
-          'within it: %s')
-
-    # A list does not have an enclosing container
-    error.add_error_code(
-      'OC_LIST_NO_ENCLOSING_CONTAINER', 3,
-      'List %s is directly within a config or state container (%s)')
+        "OC_LIST_SURROUNDING_CONTAINER", ErrorLevel.MAJOR,
+        "List %s is within a container (%s) that has other elements "
+        "within it: %s")
 
     # a module defines data nodes at the top-level
     error.add_error_code(
-      'OC_MODULE_DATA_DEFINITIONS', 3,
-      'Module %s defines data definitions at the top level: %s')
+        "OC_MODULE_DATA_DEFINITIONS", ErrorLevel.MAJOR,
+        "Module %s defines data definitions at the top level: %s")
 
     # a module is missing an openconfig-version statement
     error.add_error_code(
-      'OC_MODULE_MISSING_VERSION', 3, 'Module %s is missing an ' +
-      'openconfig-version statement')
+        "OC_MODULE_MISSING_VERSION", ErrorLevel.MAJOR,
+        "Module %s is missing an openconfig-version statement")
 
-    # a module uses the 'choice' keyword
+    # a module uses the "choice" keyword
     error.add_error_code(
-      'OC_STYLE_AVOID_CHOICE', 4, 'Element %s uses the choice keyword, which ' +
-        'should be avoided')
+        "OC_STYLE_AVOID_CHOICE", ErrorLevel.WARNING,
+        "Element %s uses the choice keyword, which should be avoided")
 
-    # a module uses the 'presence' keyword
+    # a module uses the "presence" keyword
     error.add_error_code(
-      'OC_STYLE_AVOID_PRESENCE', 4, 'Element %s uses the presence keyword, ' +
-        'which should be avoided')
+        "OC_STYLE_AVOID_PRESENCE", ErrorLevel.MINOR,
+        "Element %s uses the presence keyword which should be avoided")
 
-    # a module uses the 'if-feature' or 'feature' keyword
+    # a module uses the "if-feature" or "feature" keyword
     error.add_error_code(
-      'OC_STYLE_AVOID_FEATURES', 4, 'Element %s uses feature or if-feature ' +
-        'which should be avoided')
+        "OC_STYLE_AVOID_FEATURES", ErrorLevel.MINOR,
+        "Element %s uses feature or if-feature which should be avoided")
 
     # invalid semantic version argument to openconfig-version
     error.add_error_code(
-      'OC_INVALID_SEMVER', 3, 'Semantic version specified (%s) is invalid')
+        "OC_INVALID_SEMVER", ErrorLevel.MAJOR,
+        "Semantic version specified (%s) is invalid")
 
     # missing a revision statement that has a reference of the
     # current semantic version
     error.add_error_code(
-      'OC_MISSING_SEMVER_REVISION', 4, 'Revision statement should contain' +
-        'reference substatement corresponding to semantic version %s')
+        "OC_MISSING_SEMVER_REVISION", ErrorLevel.MAJOR,
+        "Revision statement should contain reference substatement "
+        " corresponding to semantic version %s")
 
     # invalid data element naming
     error.add_error_code(
-      'OC_DATA_ELEMENT_INVALID_NAME', 4, 'Invalid naming for element %s ' +
-          'data elements should generally be lower-case-with-hypens')
+        "OC_DATA_ELEMENT_INVALID_NAME", ErrorLevel.MAJOR,
+        "Invalid naming for element %s data elements should "
+        " generally be lower-case-with-hypens")
 
     # the module uses an invalid form of prefix
     error.add_error_code(
-      'OC_PREFIX_INVALID', 4, 'Prefix %s for module does not match the ' +
-          'expected format - use the form oc-<shortdescription>')
+        "OC_PREFIX_INVALID", ErrorLevel.MINOR,
+        "Prefix %s for module does not match the expected "
+        " format - use the form oc-<shortdescription>")
 
     # the module is missing a standard grouping (e.g., -top)
     error.add_error_code(
-      'OC_MISSING_STANDARD_GROUPING', 4, 'Module %s is missing a grouping suffixed ' +
-        'with %s')
+        "OC_MISSING_STANDARD_GROUPING", ErrorLevel.WARNING,
+        "Module %s is missing a grouping suffixed with %s")
 
     # the module has a nonstandard grouping name
     error.add_error_code(
-      'OC_GROUPING_NAMING_NONSTANDARD', 4, 'In container %s, grouping %s does not ' +
-        'match standard naming - suffix with %s?')
+        "OC_GROUPING_NAMING_NONSTANDARD", ErrorLevel.WARNING,
+        "In container %s, grouping %s does not match standard "
+        "naming - suffix with %s?")
 
     # key statements do not have quoted arguments
     error.add_error_code(
-      'OC_KEY_ARGUMENT_UNQUOTED', 3, 'All key arguments of a list should be ' +
-        'quoted (%s is not)')
+        "OC_KEY_ARGUMENT_UNQUOTED", ErrorLevel.MINOR,
+        "All key arguments of a list should be quoted (%s is not)")
 
-def v_chk_octypes(ctx, statement):
-  """
-    Check individual types for compliance against OpenConfig rules.
-    Particularly:
-      * enumeration arguments should be in UPPERCASE_WITH_UNDERSCORES
-      * identity names should be in UPPERCASE_WITH_UNDERSCORES
-  """
 
-  re_uc = re.compile(r'[a-z]')
-  re_ucwithunderscore = re.compile(r'^[A-Z][0-9A-Z\_\.]+$')
+class OCLintStages(object):
+  """Containing class for OpenConfig linter stages.
 
-  if (statement.arg == 'enumeration'):
-    enums = statement.search('enum')
-    for enum in enums:
-      if re_uc.search(enum.arg):
-        err_add(ctx.errors, statement.pos, 'OC_ENUM_CASE',
-          (enum.arg, enum.arg.upper()))
-
-      if not re_ucwithunderscore.match(enum.arg):
-        err_add(ctx.errors, statement.pos, 'OC_ENUM_UNDERSCORES',
-          (enum.arg, enum.arg.upper().replace("-", "_")))
-
-  if (statement.keyword == 'identity'):
-    if re_uc.search(statement.arg):
-      err_add(ctx.errors, statement.pos, 'OC_IDENTITY_CASE',
-        (statement.arg, statement.arg.upper()))
-
-    if not re_ucwithunderscore.match(statement.arg):
-      err_add(ctx.errors, statement.pos, 'OC_IDENTITY_UNDERSCORES',
-        (statement.arg, statement.arg.upper().replace("-", "_")))
-
-  if (statement.keyword == 'identityref'):
-    base_stmt = statement.search_one('base')
-    if base_stmt is not None:
-      if not re_uc.search(base_stmt.arg):
-        err_add(ctx.errors, statement.pos, 'OC_IDENTITY_CASE',
-          (base_stmt.arg, base_stmt.arg.upper()))
-      if not re_ucwithunderscore.match(base_stmt.arg):
-        err_add(ctx.errors, statement.pos, 'OC_IDENTITY_UNDERSCORES',
-          (base_stmt.arg, base_stmt.arg.upper()))
-
-def v_chk_ocmodule(ctx, statement):
-  """
-    Check characteristics of an entire OpenConfig module.
-    Particularly:
-      * Module should include an "openconfig-extensions:openconfig-version"
-        statement, which should match semantic versioning patterns.
-      * Module should not define any data elements at the top level.
-      * Module name should be "openconfig-".
+    Methods that call the relevant linter functions for a particular
+    Pyang validation stage. Each static method of this class is used
+    in a validation phase.
   """
 
-  data_definitions = [i.arg for i in statement.substmts if i.keyword in
-                      INSTANTIATED_DATA_KEYWORDS]
-  if len(data_definitions):
-    err_add(ctx.errors, statement.pos, 'OC_MODULE_DATA_DEFINITIONS',
-      (statement.arg, ", ".join(data_definitions)))
+  @staticmethod
+  def preinitialisation(ctx, stmt):
+    """Preinitialisation phase validation functions.
 
-  version = None
-  for s in statement.substmts:
-    if isinstance(s.keyword, tuple) and s.keyword[1] == 'openconfig-version':
-      version = s
-  if version is None:
-    err_add(ctx.errors, statement.pos, 'OC_MODULE_MISSING_VERSION',
-      statement.arg)
-    return
+    Called on a per-statement basis prior to pyang"s more
+    detailed parsing.
 
-  if not re.match("^[0-9]+\.[0-9]+\.[0-9]+$", version.arg):
-    err_add(ctx.errors, statement.pos, 'OC_INVALID_SEMVER',
-      version.arg)
+    Args:
+        ctx: pyang.Context for the current validation.
+        stmt: pyang.Statement matching the validation call.
+    """
+    validmap = {
+        u"module": [OCLintFunctions.check_module_rawtext],
+    }
 
-  match_revision = False
-  for revision_stmt in statement.search('revision'):
-    reference_stmt = revision_stmt.search_one('reference')
-    if reference_stmt is not None and \
-              reference_stmt.arg == version.arg:
-      match_revision = True
+    for fn in OCLintStages.map_statement_to_lint_fn(stmt, validmap):
+      fn(ctx, stmt)
 
-  if match_revision is False:
-    err_add(ctx.errors, statement.pos, 'OC_MISSING_SEMVER_REVISION',
-      version.arg)
+  @staticmethod
+  def openconfig_type(ctx, stmt):
+    """OpenConfig types validation functions.
 
-  top_groupings = []
-  for grouping in statement.search('grouping'):
-    if re.match(".*\-top$", grouping.arg):
-      top_groupings.append(grouping.arg)
-  if not len(top_groupings):
-    err_add(ctx.errors, statement.pos, 'OC_MISSING_STANDARD_GROUPING',
-      (statement.arg, "-top"))
+    Called per-statement after pyang's type validation of the
+    module - this is used to make stricter rules for type usage.
 
+    Args:
+        ctx: pyang.Context for the current validation
+        stmt: pyang.Statement matching the validation call.
+    """
 
+    validmap = {
+        u"*": [
+            OCLintFunctions.check_yang_feature_usage,
+        ],
+        u"LEAVES": [
+            OCLintFunctions.check_enumeration_style,
+        ],
+        u"identity": [
+            OCLintFunctions.check_identity_style,
+        ],
+        u"module": [
+            OCLintFunctions.check_versioning,
+            OCLintFunctions.check_top_level_data_definitions,
+            OCLintFunctions.check_standard_groupings,
+        ],
+        u"augment": [
+            OCLintFunctions.check_relative_paths,
+        ],
+        u"path": [
+            OCLintFunctions.check_relative_paths,
+        ]
+    }
 
-def v_chk_opstate_paths(ctx, statement):
-  """
-    Check elements for compliance with the opstate structure. Called for leaves
-    and leaf-lists.
+    for fn in OCLintStages.map_statement_to_lint_fn(stmt, validmap):
+      fn(ctx, stmt)
 
-    Particularly:
-      * Skip checks for YANG list keys
-      * Check that there is a single 'config' and 'state' container in the
-        path
-      * Check that elements in a 'config' container are r/w, and 'state' are ro
-  """
+  @staticmethod
+  def openconfig_reference(ctx, stmt):
+    """OpenConfig reference validation phase.
 
-  pathstr = statements.mk_path_str(statement, False)
+    Validation functions that fit within the reference resolution
+    phase of pyang.
 
-  # leaves that are list keys are exempt from this check.  YANG
-  # requires them at the top level of the list, i.e., not allowed
-  # in a descendent container
-  if statement.keyword == 'leaf' and hasattr(statement, 'i_is_key'):
-    keytype = statement.search_one ('type')
-    if keytype.arg != 'leafref':
-      err_add(ctx.errors, statement.pos, 'OC_OPSTATE_KEY_LEAFREF',
-        statement.arg)
-    # print "leaf %s is a key, skipping" % statement.arg
-    return
+    Args:
+        ctx: pyang.Context for the current validation
+        stmt: pyang.Statement matching the validation call
+    """
+    validmap = {
+        u"LEAVES": [
+            OCLintFunctions.check_opstate,
+        ],
+        u"list": [
+            OCLintFunctions.check_list_enclosing_container,
+            OCLintFunctions.check_leaf_mirroring,
+        ],
+        u"container": [
+            OCLintFunctions.check_leaf_mirroring,
+        ],
+    }
 
-  path_elements = yangpath.split_paths(pathstr)
-  # count number of 'config' and 'state' elements in the path
-  confignum = path_elements.count('config')
-  statenum = path_elements.count('state')
-  if confignum != 1 and statenum != 1:
-    err_add(ctx.errors, statement.pos, 'OC_OPSTATE_CONTAINER_COUNT',
-      (pathstr))
+    for fn in OCLintStages.map_statement_to_lint_fn(stmt, validmap):
+      fn(ctx, stmt)
 
-  # for elements in a config or state container, make sure they have the
-  # correct config property
-  if statement.parent.keyword == 'container':
-    if statement.parent.arg == 'config':
-      if statement.i_config is False:
-        err_add(ctx.errors, statement.pos, 'OC_OPSTATE_CONFIG_PROPERTY',
-          (statement.arg, 'config', 'true'))
-    elif statement.parent.arg == 'state':
-      if statement.i_config is True:
-        err_add(ctx.errors, statement.parent.pos, 'OC_OPSTATE_CONFIG_PROPERTY',
-          (statement.arg, 'state', 'false'))
-    else:
-      valid_enclosing_state = False
-      if statement.i_config is False:
-        # Allow nested containers within a state container
-        path_elements = yangpath.split_paths(pathstr)
-        if u"state" in path_elements:
-          valid_enclosing_state = True
+  @staticmethod
+  def map_statement_to_lint_fn(stmt, validation_map):
+    """Map for a statement to the lint functions to be run.
 
-      if valid_enclosing_state is False:
-        err_add(ctx.errors, statement.pos, 'OC_OPSTATE_CONTAINER_NAME',
-          (statement.arg, pathstr))
+    Args:
+        stmt: pyang.Statement object for the statement that needs
+          the validation functions calculated.
+        validation_map: dictionary keyed by statement keyword or a
+          list of statement keywords, with values of a list of functions
+          that are to be run for that keyword.
 
+    Returns:
+      Complete list of functions to be run for the statement.
+    """
+    functions = []
 
-def v_chk_leaf_mirroring(ctx, statement):
-  """
-    Check that all config leaves are included in the state container
-  """
+    if u"*" in validation_map:
+      functions.extend(validation_map[u"*"])
 
-  # Skip the check if the container is not a parent of other containers
-  if statement.search_one('container') is None:
-    return
+    if u"LEAVES" in validation_map:
+      if unicode(stmt.keyword) in LEAFNODE_KEYWORDS:
+        functions.extend(validation_map[u"LEAVES"])
 
-  containers = statement.search('container')
-  # Only perform this check if this is a container that has both a config
-  # and state container
-  c_config, c_state = None, None
-  for c in containers:
-    if c.arg == 'config':
-      c_config = c
-    elif c.arg == 'state':
-      c_state = c
-    if not None in [c_config, c_state]:
-      break
+    if stmt.keyword in validation_map:
+      functions.extend(validation_map[stmt.keyword])
 
-  if None in [c_config, c_state]:
-    return
-
-  config_elem_names = [i.arg for i in c_config.substmts
-                          if not i.arg == 'config' and
-                            i.keyword in INSTANTIATED_DATA_KEYWORDS]
-  state_elem_names = [i.arg for i in c_state.substmts
-                          if not i.arg == 'state' and
-                            i.keyword in INSTANTIATED_DATA_KEYWORDS]
-
-  for elem in config_elem_names:
-    if not elem in state_elem_names:
-      err_add(ctx.errors, statement.parent.pos, 'OC_OPSTATE_APPLIED_CONFIG',
-        (elem, statements.mk_path_str(statement, False)))
+    return functions
 
 
-def v_chk_path_refs(ctx, statement):
-  """
-    Check path references for absolute / relative paths as appropriate.
-    This function is called with the following statements:
-      * path
-      * augment
-  """
-  path = statement.arg
-  if path[0] == '/':
-    abspath = True
-  else:
-    abspath = False
-  components = yangpath.split_paths(path)
-  # consider the namespace in the first component
-  # assumes that if the namespace matches the module namespace, then
-  # relative path should be used (intra-module )
-  if ":" in components[0]:
-    (namespace, barepath) = components[0].split(':')
-  else:
-    namespace = statement.i_module.i_prefix
-    barepath = components[0]
-  mod_prefix = statement.i_module.i_prefix
-  if namespace == mod_prefix and abspath:
-    err_add(ctx.errors, statement.pos, 'OC_RELATIVE_PATH',
-      (statement.keyword, statement.arg))
+class OCLintFunctions(object):
+  """OpenConfig linter validation functions."""
 
-def v_chk_list_placement(ctx, statement):
-  """
-    Check that lists are placed correctly in the structure.
-    Particularly:
-      * Check that the list has a surrounding container that does not
-        have any other elements within it.
-  """
+  @staticmethod
+  def check_module_rawtext(ctx, stmt):
+    """Perform validation of a module"s raw text.
 
-  if statement.parent.arg in ["config", "state"]:
-    err_add(ctx.errors, statement.parent.pos, 'OC_LIST_NO_ENCLOSING_CONTAINER',
-      (statement.arg, statement.parent.arg))
-
-  parent_substmts = [i.arg for i in statement.parent.substmts
-                      if i.keyword in INSTANTIATED_DATA_KEYWORDS]
-  if not parent_substmts == [statement.arg]:
-    remaining_parent_substmts = [i.arg for i in statement.parent.substmts
-                                  if not i.arg == statement.arg and i.keyword
-                                    in INSTANTIATED_DATA_KEYWORDS]
-    err_add(ctx.errors, statement.parent.pos, 'OC_LIST_SURROUNDING_CONTAINER',
-      (statement.arg, statement.parent.arg,
-        ", ".join(remaining_parent_substmts)))
-
-def v_styleguide_warnings(ctx, statement):
-  """
-    Validate a module against the requirements specified in the
-    OpenConfig style guide. This includes:
-      - Not using the choice statement
-      - Not using the presence keyword
-      - Not using feature statements
- """
-  if statement.keyword == 'choice':
-    err_add(ctx.errors, statement.pos, 'OC_STYLE_AVOID_CHOICE',
-      (statement.arg))
-  elif statement.keyword == 'presence':
-    err_add(ctx.errors, statement.pos, 'OC_STYLE_AVOID_PRESENCE',
-      (statement.parent.arg))
-  elif statement.keyword == 'feature':
-    err_add(ctx.errors, statement.pos, 'OC_STYLE_AVOID_FEATURES',
-      (statement.arg))
-  elif statement.keyword == 'if-feature':
-    err_add(ctx.errors, statement.parent.pos, 'OC_STYLE_AVOID_FEATURES',
-      (statement.parent.arg))
-
-def v_chk_data_elements(ctx, statement):
-  """
-    Validate data elements with a particular set of rules for OpenConfig
-    rules.
- """
-  if not re.match("^[A-Za-z0-9\-]+$", statement.arg):
-    err_add(ctx.errors, statement.pos, 'OC_DATA_ELEMENT_INVALID_NAME',
-      statement.arg)
-
-def v_chk_prefix(ctx, statement):
-  """
-    Validation rules relating to the prefix statement
-  """
-  if not re.match("^oc\-[a-z\-]+$", statement.arg) and \
-        "openconfig-" in statement.arg:
-    err_add(ctx.errors, statement.pos, 'OC_PREFIX_INVALID',
-      statement.arg)
-
-def v_preinit_module_checks(ctx, statement):
-  """
-    Validation functions that can only be run against the raw
-    YANG, prior to pyang parsing it. Some attributes of the
-    text file get lost - for example, quotations.
-  """
-
-  handle = None
-  for mod in ctx.repository.get_modules_and_revisions(ctx):
-    if mod[0] == statement.arg:
-      handle = mod
-
-  if handle is not None:
+    Args:
+      ctx: The pyang.Context for the current validation.
+      stmt: The pyang.Statement for a module that we are parsing
+        Function is called once per module to reduce the number of
+        iterations through the module.
+    """
     try:
-      module = ctx.repository.get_module_from_handle(handle[2])
-      module_lines = module[2].split("\n")
-    except (AttributeError, IndexError) as e:
-      sys.stderr.write("WARNING: could not correctly split module %s: %s\n" %
-        (statement.arg, str(e)))
+      mod_filename = os.path.realpath(stmt.pos.ref).split("/")[-1]
+      mod_filename = mod_filename.split(".")[0]
+    except IndexError:
+      err_add(ctx.errors, stmt.pos, "OC_LINTER_ERROR",
+              "Can't determine a module name for %s" % stmt.pos)
 
-  else:
-    sys.stderr.write("WARNING: could not locate module %s in open modules\n" % statement.arg)
-    return
+    handle = None
+    for mod in ctx.repository.get_modules_and_revisions(ctx):
+      # stmt.pos.ref gives the reference to the file that this
+      # key statement was within
+      if mod[0] == mod_filename:
+        handle = mod
+        break
 
-  key_re = re.compile("^([ ]+)key([ ]+)(?P<arg>.*);$")
-  quoted_re = re.compile('^\".*\"$')
+    if handle is not None:
+      try:
+        module = ctx.repository.get_module_from_handle(handle[2])
+      except (AttributeError, IndexError) as e:
+        err_add(ctx.errors, stmt.pos, "OC_LINTER_ERROR",
+                "Can't find module %s: %s" % stmt.pos.ref, unicode(e))
+        return
+    else:
+      err_add(ctx.errors, stmt.pos, "OC_LINTER_ERROR",
+              "Couldn't open module %s" % stmt.pos.ref)
+      return
 
-  ln_count = 0
-  for l in module_lines:
-    ln_count += 1
-    l = l.rstrip("\n")
-    if key_re.match(l):
-      arg_part = key_re.sub('\g<arg>', l)
-      if not quoted_re.match(arg_part):
-        # Because we are not reading the file like pyang does, then
-        # we do not have an existing position object, so fake one.
-        pos = error.Position(statement.pos.ref)
-        pos.line = ln_count
-        err_add(ctx.errors, pos, 'OC_KEY_ARGUMENT_UNQUOTED', arg_part)
+    key_re = re.compile(r"^([ ]+)key([ ]+)(?P<arg>.*);$")
+    quoted_re = re.compile(r"^\".*\"$")
+
+    ln_count = 0
+    for ln in module[2].split("\n"):
+      ln_count += 1
+
+      # Remove the newline from the module
+      ln = ln.rstrip("\n")
+      if key_re.match(ln):
+        key_arg = key_re.sub(r"\g<arg>", ln)
+        if not quoted_re.match(key_arg):
+          # Need to create a fake position object for the
+          # key statement because of this pre-initialisation
+          # module parse.
+          pos = error.Position(stmt.pos.ref)
+          pos.line = ln_count
+
+          # Generate an error as the key argument is not
+          # quoted.
+          err_add(ctx.errors, pos, "OC_KEY_ARGUMENT_UNQUOTED",
+                  key_arg)
+      ln_count += 1
+
+  @staticmethod
+  def is_openconfig_validatable_module(mod):
+    """Check whether the module is an OpenConfig module.
+
+    Avoid validating modules that are not OpenConfig.
+
+    Args:
+        mod: the pyang.Statement for the module
+
+    Returns:
+      An enumerated ModuleType
+    """
+    if re.match(r"[a-z0-9]+\-.*", mod.arg.lower()):
+      # Avoid parsing IETF and IANA modules which are currently
+      # included by OpenConfig, and avoid parsing the extension
+      # module itself.
+      modname_parts = mod.arg.split("-")
+      if unicode(modname_parts[0]) in [u"ietf", u"iana"]:
+        return ModuleType.NONOC
+      elif unicode(modname_parts[1]) == "extensions":
+        return ModuleType.OCINFRA
+      return ModuleType.OC
+    return ModuleType.NONOC
+
+  @staticmethod
+  def check_versioning(ctx, stmt):
+    """Check that the module has the relevant OC versioning.
+
+    The module needs an openconfig-extensions openconfig-version
+    statement, which should match the semantic version format.
+    There must also be a revision statement that matches semantic
+    version
+
+    Args:
+      ctx: pyang.Context for the validation
+      stmt: pyang.Statement for the matching module
+
+    """
+
+    # Don't perform this check for modules that are not OpenConfig
+    # or are OpenConfig infrastructure (e.g., extensions)
+    if (OCLintFunctions.is_openconfig_validatable_module(stmt) in
+        [ModuleType.NONOC, ModuleType.OCINFRA]):
+      return
+
+    version = None
+    for substmt in stmt.substmts:
+      # pyang uses a keyword tuple when the element is from
+      # an external extension rather than a built-in, check for
+      # this before checking the argument. Assumption is made
+      # that openconfig-version is unique across all extension
+      # modules.
+      if (isinstance(substmt.keyword, tuple) and
+          substmt.keyword[1] == "openconfig-version"):
+        version = substmt
+
+    if version is None:
+      err_add(ctx.errors, stmt.pos, "OC_MODULE_MISSING_VERSION",
+              stmt.arg)
+      return
+
+    if not re.match(r"^[0-9]+\.[0-9]+\.[0-9]+$", version.arg):
+      err_add(ctx.errors, stmt.pos, "OC_INVALID_SEMVER",
+              version.arg)
+
+    # Check that there
+    match_revision = False
+    for revision_stmt in stmt.search("revision"):
+      reference_stmt = revision_stmt.search_one("reference")
+      if reference_stmt is not None and reference_stmt.arg == version.arg:
+        match_revision = True
+
+    if match_revision is False:
+      err_add(ctx.errors, stmt.pos, "OC_MISSING_SEMVER_REVISION",
+              version.arg)
+
+  @staticmethod
+  def check_top_level_data_definitions(ctx, stmt):
+    """Check that the module has no data elements at the root.
+
+    Args:
+      ctx: pyang.Context for the validation
+      stmt: pyang.Statement for the matching module
+    """
+    data_definitions = [i.arg for i in stmt.substmts if i.keyword
+                        in INSTANTIATED_DATA_KEYWORDS]
+    if data_definitions:
+      err_add(ctx.errors, stmt.pos, "OC_MODULE_DATA_DEFINITIONS",
+              (stmt.arg, ", ".join(data_definitions)))
+
+  @staticmethod
+  def check_enumeration_style(ctx, stmt):
+    """Check validation rules for OpenConfig enum values.
+
+    Args:
+      ctx: pyang.Context for validation
+      stmt: pyang.Statement representing a leaf or leaf-list
+          containing an enumeration
+    """
+    elemtype = stmt.search_one("type")
+    if elemtype is None or elemtype.arg != "enumeration":
+      return
+
+    for enum in elemtype.search("enum"):
+      if re.match(r"[a-z]", enum.arg):
+        err_add(ctx.errors, stmt.pos, "OC_ENUM_CASE",
+                (enum.arg, enum.arg.upper()))
+      elif not re.match(r"^[A-Z][A-Z0-9\_\.]+$", enum.arg):
+        err_add(ctx.errors, stmt.pos, "OC_ENUM_UNDERSCORES",
+                (enum.arg, enum.arg.upper()))
+
+  @staticmethod
+  def check_identity_style(ctx, stmt):
+    """Check validation rules for OpenConfig identity leaves.
+
+    Args:
+      ctx: pyang.Context for validation
+      stmt: pyang.Statemnet representing a leaf or leaf-list
+          containing an identity
+    """
+    if stmt.keyword != "identity":
+      return
+
+    if re.match(r"^[a-z]", stmt.arg):
+      err_add(ctx.errors, stmt.pos, "OC_IDENTITY_CASE",
+              (stmt.arg, stmt.arg.upper()))
+    elif not re.match(r"^[A-Z][A-Z0-9\_\.]+$", stmt.arg):
+      err_add(ctx.errors, stmt.pos, "OC_IDENTITY_UNDERSCORES",
+              (stmt.arg, stmt.arg.upper()))
+
+  @staticmethod
+  def check_opstate(ctx, stmt):
+    """Check operational state validation rules.
+
+    Args:
+      ctx: pyang.Context for validation
+      stmt: pyang.Statement for a leaf or leaf-list
+    """
+    pathstr = statements.mk_path_str(stmt)
+
+    # leaves that are list keys are exempt from this check.  YANG
+    # requires them at the top level of the list, i.e., not allowed
+    # in a descendent container
+    is_key = False
+    if stmt.parent.keyword == "list" and stmt.keyword == "leaf":
+      key_stmt = stmt.parent.search_one("key")
+      if key_stmt is not None:
+        if " " in key_stmt.arg:
+          key_parts = [unicode(i) for i in key_stmt.arg.split(" ")]
+        else:
+          key_parts = [unicode(key_stmt.arg)]
+
+        if stmt.arg in key_parts:
+          is_key = True
+
+    if is_key:
+      keytype = stmt.search_one("type")
+      if keytype.arg != "leafref":
+        err_add(ctx.errors, stmt.pos, "OC_OPSTATE_KEY_LEAFREF",
+                stmt.arg)
+      return
+
+    path_elements = yangpath.split_paths(pathstr)
+    # count number of 'config' and 'state' elements in the path
+    confignum = path_elements.count("config")
+    statenum = path_elements.count("state")
+    if confignum != 1 and statenum != 1:
+      err_add(ctx.errors, stmt.pos, "OC_OPSTATE_CONTAINER_COUNT",
+              (pathstr))
+
+    # for elements in a config or state container, make sure they have the
+    # correct config property
+    if stmt.parent.keyword == "container":
+      if stmt.parent.arg == "config":
+        if stmt.i_config is False:
+          err_add(ctx.errors, stmt.pos, "OC_OPSTATE_CONFIG_PROPERTY",
+                  (stmt.arg, "config", "true"))
+      elif stmt.parent.arg == "state":
+        if stmt.i_config is True:
+          err_add(ctx.errors, stmt.parent.pos, "OC_OPSTATE_CONFIG_PROPERTY",
+                  (stmt.arg, "state", "false"))
+      else:
+        valid_enclosing_state = False
+
+        if stmt.i_config is False:
+          # Allow nested containers within a state container
+          path_elements = yangpath.split_paths(pathstr)
+          if u"state" in path_elements:
+            valid_enclosing_state = True
+
+        if valid_enclosing_state is False:
+          err_add(ctx.errors, stmt.pos, "OC_OPSTATE_CONTAINER_NAME",
+                  (stmt.arg, pathstr))
+
+  @staticmethod
+  def check_list_enclosing_container(ctx, stmt):
+    """Check that a list has an enclosing container.
+
+    Args:
+      ctx: pyang.Context for the validation
+      stmt: pyang.Statement for the list
+    """
+
+    parent_substmts = [i.arg for i in stmt.parent.substmts
+                       if i.keyword in INSTANTIATED_DATA_KEYWORDS]
+
+    if parent_substmts != [stmt.arg]:
+      remaining_parent_substmts = [i.arg for i in stmt.parent.substmts
+                                   if i.arg != stmt.arg and i.keyword
+                                   in INSTANTIATED_DATA_KEYWORDS]
+      err_add(ctx.errors, stmt.parent.pos,
+              "OC_LIST_SURROUNDING_CONTAINER",
+              (stmt.arg, stmt.parent.arg,
+               ", ".join(remaining_parent_substmts)))
+
+  @staticmethod
+  def check_leaf_mirroring(ctx, stmt):
+    """Check applied configuration mirrors intended configuration.
+
+    Check that each leaf in config has a corresponding leaf in state.
+
+    Args:
+      ctx: pyang.Context for the validation
+      stmt: pyang.Statement for the parent container or list.
+    """
+
+    # Skip the check if the container is not a parent of other containers
+    if stmt.search_one("container") is None:
+      return
+
+    containers = stmt.search("container")
+    # Only perform this check if this is a container that has both a config
+    # and state container
+    c_config, c_state = None, None
+    for c in containers:
+      if c.arg == "config":
+        c_config = c
+      elif c.arg == "state":
+        c_state = c
+
+    if None in [c_config, c_state]:
+      return
+
+    config_elem_names = [i.arg for i in c_config.i_children
+                         if i.arg != "config" and
+                         i.keyword in INSTANTIATED_DATA_KEYWORDS]
+    state_elem_names = [i.arg for i in c_state.i_children
+                        if i.arg != "state" and
+                        i.keyword in INSTANTIATED_DATA_KEYWORDS]
+
+    for elem in config_elem_names:
+      if elem not in state_elem_names:
+        err_add(ctx.errors, stmt.parent.pos, "OC_OPSTATE_APPLIED_CONFIG",
+                (elem, statements.mk_path_str(stmt, False)))
+
+  @staticmethod
+  def check_yang_feature_usage(ctx, stmt):
+    """Check whether undesirable YANG features are used.
+
+    Args:
+      ctx: pyang.Context for the validation
+      stmt: pyang.Statement object for the statement the validation function
+          is called for.
+    """
+    if stmt.keyword == "choice":
+      err_add(ctx.errors, stmt.pos, "OC_STYLE_AVOID_CHOICE",
+              (stmt.arg))
+    elif stmt.keyword == "presence":
+      err_add(ctx.errors, stmt.pos, "OC_STYLE_AVOID_PRESENCE",
+              (stmt.parent.arg))
+    elif stmt.keyword == "feature":
+      err_add(ctx.errors, stmt.pos, "OC_STYLE_AVOID_FEATURES",
+              (stmt.arg))
+    elif stmt.keyword == "if-feature":
+      err_add(ctx.errors, stmt.parent.pos, "OC_STYLE_AVOID_FEATURES",
+              (stmt.parent.arg))
+
+  @staticmethod
+  def check_relative_paths(ctx, stmt):
+    """Check whether relative paths are used within a module.
+
+    Args:
+      ctx: pyang.Context for the validation
+      stmt: pyang.Statement object for the statement the validation function
+      is called for.
+    """
+    path = stmt.arg
+    if path[0] == "/":
+      abspath = True
+    else:
+      abspath = False
+
+    components = yangpath.split_paths(path)
+    # consider the namespace in the first component
+    # assumes that if the namespace matches the module namespace, then
+    # relative path should be used (intra-module)
+    if ":" in components[0]:
+      namespace = components[0].split(":")[0]
+    else:
+      namespace = stmt.i_module.i_prefix
+
+    mod_prefix = stmt.i_module.i_prefix
+    if namespace == mod_prefix and abspath:
+      err_add(ctx.errors, stmt.pos, "OC_RELATIVE_PATH",
+              (stmt.keyword, stmt.arg))
+
+  @staticmethod
+  def check_standard_groupings(ctx, stmt):
+    """Check whether there are missing standard groupings in the model.
+
+    Args:
+        ctx:  pyang.Context for the validation
+        stmt: pyang.Statement for the statement that has been called on.
+    """
+
+    # Don't perform this check for modules that are not OpenConfig
+    # or are OpenConfig infrastructure (e.g., extensions)
+    if (OCLintFunctions.is_openconfig_validatable_module(stmt) in
+        [ModuleType.NONOC, ModuleType.OCINFRA]):
+      return
+
+    top_groupings = []
+    for grouping in stmt.search("grouping"):
+      if re.match(r".*\-top$", grouping.arg):
+        top_groupings.append(grouping.arg)
+
+    if not top_groupings:
+      err_add(ctx.errors, stmt.pos, "OC_MISSING_STANDARD_GROUPING",
+              (stmt.arg, "-top"))

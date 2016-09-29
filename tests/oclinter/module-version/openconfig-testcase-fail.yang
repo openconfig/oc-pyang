@@ -1,0 +1,9 @@
+module openconfig-testcase-fail {
+  prefix "oc-tc";
+  namespace "http://openconfig.net/linter/testcase";
+
+  description
+    "Simple testcase to check compliance with quoting
+    of strings";
+
+}

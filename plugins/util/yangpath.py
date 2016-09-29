@@ -20,16 +20,22 @@ Utilities for manipulating YANG paths
 
 import re
 
-def split_paths (path):
-  """ return a list of path elements """
+def split_paths(path):
+  """Return a list of path elements.
 
-  components = path.split('/')
+  Args:
+    path: A YANG path string specified as /a/b
+  """
+  components = path.split("/")
   return [c for c in components if c]
 
-def strip_namespace (path):
-  """Removes namespace prefixes from elements of the supplied path"""
-  re_ns = re.compile (r'^.+:')
-  #pathstr = re_ns.sub('/', pathstr, 0)
-  path_components = [re_ns.sub('',comp) for comp in path.split('/')]
-  pathstr = '/'.join(path_components)
+def strip_namespace(path):
+  """Removes namespace prefixes from elements of the supplied path.
+  
+  Args:
+    path: A YANG path string
+  """
+  re_ns = re.compile (r"^.+:")
+  path_components = [re_ns.sub("",comp) for comp in path.split("/")]
+  pathstr = "/".join(path_components)
   return pathstr
