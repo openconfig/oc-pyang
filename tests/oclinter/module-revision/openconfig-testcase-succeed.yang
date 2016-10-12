@@ -5,8 +5,8 @@ module openconfig-testcase-succeed {
   import openconfig-extensions { prefix oc-ext; }
 
   description
-    "Simple testcase to check compliance with quoting
-    of strings";
+    "Success testcase for a module not having a revision
+    statement";
 
   oc-ext:openconfig-version "0.0.1";
 
@@ -14,46 +14,5 @@ module openconfig-testcase-succeed {
     reference "0.0.1";
     description
       "Revision statement";
-  }
-
-  grouping test-list-config {
-    description
-      "Test list config container";
-
-    leaf test-key {
-      type string;
-      description
-        "Test list key";
-    }
-  }
-
-  grouping testcase-top {
-    description
-      "Top-level grouping";
-
-    container test-container {
-      list test-list {
-        key "test-key";
-
-        leaf test-key {
-          type leafref {
-            path "../config/test-key";
-          }
-        }
-
-        container config {
-          description
-            "test-list config";
-          uses test-list-config;
-        }
-
-        container state {
-          config false;
-          description
-            "test-list state";
-          uses test-list-config;
-        }
-      }
-    }
   }
 }

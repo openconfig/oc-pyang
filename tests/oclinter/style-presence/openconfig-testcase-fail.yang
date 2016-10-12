@@ -5,8 +5,7 @@ module openconfig-testcase-fail {
   import openconfig-extensions { prefix oc-ext; }
 
   description
-    "Simple testcase to check compliance with quoting
-    of strings";
+    "Failure testcase for use of the presence keyword";
 
   oc-ext:openconfig-version "0.0.1";
 

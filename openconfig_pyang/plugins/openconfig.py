@@ -74,14 +74,10 @@ class ExternalValidationRules(object):
                  "RFC 6087: 4.7"),
       "submodule": (("contact", "organization", "description", "revision"),
                     "RFC 6087: 4.7"),
-      # This rule is explicitly disabled because it is violated by
-      # iana-if-types
-      # "revision":(("reference",), "RFC 6087: 4.7"),
+      "revision": (("reference",), "RFC 6087: 4.7"),
       "extension": (("description",), "RFC 6087: 4.12"),
       "feature": (("description",), "RFC 6087: 4.12"),
-      # This rule is explicitly disabled, because it is violated by
-      # iana-if-types
-      # "identity":(("description",), "RFC 6087: 4.12"),
+      "identity": (("description",), "RFC 6087: 4.12"),
       "typedef": (("description",), "RFC 6087: 4.11,4.12"),
       "grouping": (("description",), "RFC 6087: 4.12"),
       "augment": (("description",), "RFC 6087: 4.12"),
@@ -152,10 +148,10 @@ class OpenConfigPlugin(lint.LintPlugin):
           lambda ctx, s: lint.v_chk_default(ctx, s))
       statements.add_validation_fun(
           "grammar", ["$chk_required"],
-          lambda ctx, s: lint.v_chk_required_substmt(ctx, s))
+          OCLintStages.openconfig_override_base_linter)
       statements.add_validation_fun(
           "grammar", ["$chk_recommended"],
-          lambda ctx, s: lint.v_chk_recommended_substmt(ctx, s))
+           OCLintStages.openconfig_override_base_linter)
 
       statements.add_validation_fun(
           "grammar", ["namespace"],
@@ -377,6 +373,27 @@ class OCLintStages(object):
     Pyang validation stage. Each static method of this class is used
     in a validation phase.
   """
+
+  @staticmethod
+  def openconfig_override_base_linter(ctx, stmt):
+    """Override functions for the base linter.
+
+    Called for particular validation functions that need overrides
+    in the context of OpenConfig. This handles cases where there
+    are external modules that do not validate according to the
+    base rules. It is called as a wrapper for the functions that are
+    known to be problematic.
+
+    Args:
+      ctx: pyang.Context for the current validation.
+      stmt: pyang.Statement matching the validation call.
+    """
+    if stmt.i_module is not None and \
+        stmt.i_module.arg in ["iana-if-type", "ietf-interfaces"]:
+      return
+
+    lint.v_chk_recommended_substmt(ctx, stmt)
+    lint.v_chk_required_substmt(ctx, stmt)
 
   @staticmethod
   def preinitialisation(ctx, stmt):
@@ -665,7 +682,7 @@ class OCLintFunctions(object):
       if re.match(r"[a-z]", enum.arg):
         err_add(ctx.errors, stmt.pos, "OC_ENUM_CASE",
                 (enum.arg, enum.arg.upper()))
-      elif not re.match(r"^[A-Z][A-Z0-9\_\.]+$", enum.arg):
+      elif not re.match(r"^[A-Z0-9][A-Z0-9\_\.]+$", enum.arg):
         err_add(ctx.errors, stmt.pos, "OC_ENUM_UNDERSCORES",
                 (enum.arg, enum.arg.upper()))
 

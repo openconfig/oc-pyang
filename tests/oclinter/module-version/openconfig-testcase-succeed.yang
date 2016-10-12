@@ -5,8 +5,8 @@ module openconfig-testcase-succeed {
   import openconfig-extensions { prefix oc-ext; }
 
   description
-    "Simple testcase to check compliance with quoting
-    of strings";
+    "Success test case for openconfig-version defined at the
+    top level";
 
   oc-ext:openconfig-version "0.0.1";
 

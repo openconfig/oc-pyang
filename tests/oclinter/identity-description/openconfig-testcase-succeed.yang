@@ -5,7 +5,14 @@ module openconfig-testcase-succeed {
   import openconfig-extensions { prefix oc-ext; }
 
   description
-    "Successful test case standard naming top-level grouping";
+    "Success test case for description of identity in an
+    OpenConfig model";
+
+  contact
+    "OpenConfig Working Group";
+
+  organization
+    "OpenConfig Working Group";
 
   oc-ext:openconfig-version "0.0.1";
 
@@ -15,11 +22,12 @@ module openconfig-testcase-succeed {
       "Revision statement";
   }
 
-  grouping foo-top {
-    description
-      "Valid top-level grouping";
+  identity TEST {
+    description "a test identity";
   }
 
-  uses foo-top;
+  identity TESTBAR {
+    description "a test identity";
+  }
 
 }

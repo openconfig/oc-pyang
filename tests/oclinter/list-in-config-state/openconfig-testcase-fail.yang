@@ -5,8 +5,8 @@ module openconfig-testcase-fail {
   import openconfig-extensions { prefix oc-ext; }
 
   description
-    "Simple testcase to check compliance with quoting
-    of strings";
+    "Failure test case for a list being directly within a
+    config or state container.";
 
   oc-ext:openconfig-version "0.0.1";
 
@@ -17,7 +17,7 @@ module openconfig-testcase-fail {
   }
 
   grouping testcase-config {
-    list list {
+    list test-list {
       key "valid";
 
       leaf valid {

@@ -5,8 +5,8 @@ module openconfig-testcase-fail {
   import openconfig-extensions { prefix oc-ext; }
 
   description
-    "Simple testcase to check compliance with quoting
-    of strings";
+    "Failure test case whereby there are a data tree
+    elements defined at the top level";
 
   oc-ext:openconfig-version "0.0.1";
 
@@ -22,7 +22,7 @@ module openconfig-testcase-fail {
     }
   }
 
-  container test{
+  container test {
     container config {
       uses test-config;
     }

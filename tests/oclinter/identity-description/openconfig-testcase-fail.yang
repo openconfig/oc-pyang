@@ -5,7 +5,14 @@ module openconfig-testcase-fail {
   import openconfig-extensions { prefix oc-ext; }
 
   description
-    "Failure test case for a common top-level grouping";
+    "Failure test case for description of identity in an
+    OpenConfig model";
+
+  contact
+    "OpenConfig Working Group";
+
+  organization
+    "OpenConfig Working Group";
 
   oc-ext:openconfig-version "0.0.1";
 
@@ -15,8 +22,11 @@ module openconfig-testcase-fail {
       "Revision statement";
   }
 
-  grouping non-standard-level {
-    description
-      "Pass";
+  identity FOO {
+    base "ietf-if:interface-type";
+  }
+
+  identity BAR {
+    base "ift:other";
   }
 }

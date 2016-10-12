@@ -5,8 +5,8 @@ module openconfig-testcase-succeed {
   import openconfig-extensions { prefix oc-ext; }
 
   description
-    "Simple testcase to check compliance with quoting
-    of strings";
+    "Success test case for there being a single config or state
+    container within an element's path";
 
   oc-ext:openconfig-version "0.0.1";
 

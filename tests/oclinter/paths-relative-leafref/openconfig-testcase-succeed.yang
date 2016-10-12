@@ -5,8 +5,8 @@ module openconfig-testcase-succeed {
   import openconfig-extensions { prefix oc-ext; }
 
   description
-    "Simple testcase to check compliance with quoting
-    of strings";
+    "Success test case to ensure that a leafref having a
+    relative path.";
 
   oc-ext:openconfig-version "0.0.1";
 
@@ -17,15 +17,15 @@ module openconfig-testcase-succeed {
   }
 
   grouping test-config {
-    leaf tleaf { type string; }
-  }
+    leaf reference {
+      type leafref {
+        path "../target";
+      }
+    }
 
-  grouping test-state {
-    leaf state-leaf { type int8; }
-  }
-
-  grouping test-state-counters {
-    leaf counter { type int8; }
+    leaf target {
+      type string;
+    }
   }
 
   grouping foo-top {
@@ -36,15 +36,11 @@ module openconfig-testcase-succeed {
       container state {
         config false;
         uses test-config;
-        uses test-state;
-
-        container counters {
-          uses test-state-counters;
-        }
       }
     }
   }
 
   uses foo-top;
+
 
 }

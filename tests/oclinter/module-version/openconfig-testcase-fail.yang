@@ -3,7 +3,6 @@ module openconfig-testcase-fail {
   namespace "http://openconfig.net/linter/testcase";
 
   description
-    "Simple testcase to check compliance with quoting
-    of strings";
+    "Simple test case where a module has no version defined";
 
 }

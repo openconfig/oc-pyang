@@ -5,7 +5,14 @@ module openconfig-testcase-succeed {
   import openconfig-extensions { prefix oc-ext; }
 
   description
-    "Success test case for applied config leaves being present";
+    "Success test case for the module statement not having
+    a reference statement.";
+
+  contact
+    "OpenConfig Working Group";
+
+  organization
+    "OpenConfig Working Group";
 
   oc-ext:openconfig-version "0.0.1";
 
@@ -15,22 +22,8 @@ module openconfig-testcase-succeed {
       "Revision statement";
   }
 
-  grouping test-config {
-    leaf tleaf { type string; }
-  }
-
   grouping foo-top {
-    container test {
-      container config {
-        uses test-config;
-      }
-      container state {
-        config false;
-        uses test-config;
-      }
-    }
+    description
+      "Empty grouping";
   }
-
-  uses foo-top;
-
 }

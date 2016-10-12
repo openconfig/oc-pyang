@@ -1,0 +1,40 @@
+module openconfig-testcase-succeed {
+  prefix "oc-tc";
+  namespace "http://openconfig.net/linter/testcase";
+
+  import openconfig-extensions { prefix oc-ext; }
+  import ietf-interfaces { prefix "ietf-if"; }
+  import iana-if-type { prefix "ift"; }
+
+  description
+    "Success test case for description of identity in a
+    number of models. Specifically, this check ensures
+    that IETF models are not checked (which do not meet
+    the linter rule in 6087)";
+
+  contact
+    "OpenConfig Working Group";
+
+  organization
+    "OpenConfig Working Group";
+
+  oc-ext:openconfig-version "0.0.1";
+
+  revision 2016-09-28 {
+    reference "0.0.1";
+    description
+      "Revision statement";
+  }
+
+  identity FOO {
+    base "ietf-if:interface-type";
+    description
+      "Test identity";
+  }
+
+  identity BAR {
+    base "ift:other";
+    description
+      "Test identity based on IANA";
+  }
+}
