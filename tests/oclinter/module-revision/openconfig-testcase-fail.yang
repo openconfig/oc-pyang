@@ -1,0 +1,12 @@
+module openconfig-testcase-fail {
+  prefix "oc-tc";
+  namespace "http://openconfig.net/linter/testcase";
+
+  import openconfig-extensions { prefix oc-ext; }
+
+  description
+ 	"Failure testcase for a module not having a revision
+ 	statement";
+
+  oc-ext:openconfig-version "0.0.1";
+}

@@ -1,0 +1,5 @@
+include LICENSE
+include openconfig_pyang/plugins/*.py
+include openconfig_pyang/plugins/util/*.py
+include openconfig_pyang/plugins/templates/*
+

@@ -1,0 +1,47 @@
+module openconfig-testcase-fail {
+  prefix "oc-tc";
+  namespace "http://openconfig.net/linter/testcase";
+
+  import openconfig-extensions { prefix oc-ext; }
+
+  description
+    "Failure test case for a list not being within a
+    surrounding container";
+
+  oc-ext:openconfig-version "0.0.1";
+
+  revision 2016-09-28 {
+    reference "0.0.1";
+    description
+      "Revision statement";
+  }
+
+  grouping list-config {
+    leaf keyleaf { type string; }
+  }
+
+  grouping foo-top {
+    list the-list {
+      key "keyleaf";
+
+      leaf keyleaf {
+        type leafref {
+          path "../config/keyleaf";
+        }
+      }
+
+      container config {
+        uses list-config;
+      }
+
+      container state {
+        config false;
+        uses list-config;
+      }
+    }
+  }
+
+  uses foo-top;
+
+
+}

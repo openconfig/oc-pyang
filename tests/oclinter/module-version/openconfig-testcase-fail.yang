@@ -1,0 +1,8 @@
+module openconfig-testcase-fail {
+  prefix "oc-tc";
+  namespace "http://openconfig.net/linter/testcase";
+
+  description
+    "Simple test case where a module has no version defined";
+
+}

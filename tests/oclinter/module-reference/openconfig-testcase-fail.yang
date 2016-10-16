@@ -1,0 +1,28 @@
+module openconfig-testcase-fail {
+  prefix "oc-tc";
+  namespace "http://openconfig.net/linter/testcase";
+
+  import openconfig-extensions { prefix oc-ext; }
+
+  description
+    "Failure test case for the module statement not having
+    a reference statement.";
+
+  contact
+    "OpenConfig Working Group";
+
+  organization
+    "OpenConfig Working Group";
+
+  oc-ext:openconfig-version "0.0.1";
+
+  revision 2016-09-28 {
+    description
+      "Revision statement";
+  }
+
+  grouping foo-top {
+    description
+      "Empty grouping";
+  }
+}

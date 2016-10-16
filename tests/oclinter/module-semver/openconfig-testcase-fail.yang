@@ -1,0 +1,11 @@
+module openconfig-testcase-fail {
+  prefix "oc-tc";
+  namespace "http://openconfig.net/linter/testcase";
+
+  import openconfig-extensions { prefix oc-ext; }
+
+  description
+    "Failure test case for an invalid semantic version";
+
+  oc-ext:openconfig-version "0.0.AA";
+}
