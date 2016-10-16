@@ -5,7 +5,7 @@ module openconfig-testcase-succeed {
   import openconfig-extensions { prefix oc-ext; }
 
   description
-    "Suceed test case for case of enumeration in an
+    "Succeed test case for case of enumeration in an
     OpenConfig model";
 
   oc-ext:openconfig-version "0.0.1";
