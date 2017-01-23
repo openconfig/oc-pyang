@@ -563,7 +563,6 @@ class OCLintFunctions(object):
       # Remove the newline from the module
       ln = ln.rstrip("\n")
       if key_re.match(ln):
-        print(ln)
         key_arg = key_re.sub(r"\g<arg>", ln)
         if not quoted_re.match(key_arg):
           # Need to create a fake position object for the
