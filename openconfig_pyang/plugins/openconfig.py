@@ -408,6 +408,7 @@ class OCLintStages(object):
     """
     validmap = {
         u"module": [OCLintFunctions.check_module_rawtext],
+        u"submodule": [OCLintFunctions.check_module_rawtext],
     }
 
     for fn in OCLintStages.map_statement_to_lint_fn(stmt, validmap):
