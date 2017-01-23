@@ -552,7 +552,8 @@ class OCLintFunctions(object):
               "Couldn't open module %s" % stmt.pos.ref)
       return
 
-    key_re = re.compile(r"^([ ]+)key([ ]+)(?P<arg>.*);$")
+    #key_re = re.compile(r"^([ ]+)?key([ ]+)(?P<arg>[^\"]);$")
+    key_re = re.compile(r"^([ ]+)?key([ ]+)(?P<arg>[^\"][a-zA-Z0-9\-_]+);$")
     quoted_re = re.compile(r"^\".*\"$")
 
     ln_count = 0
@@ -562,6 +563,7 @@ class OCLintFunctions(object):
       # Remove the newline from the module
       ln = ln.rstrip("\n")
       if key_re.match(ln):
+        print(ln)
         key_arg = key_re.sub(r"\g<arg>", ln)
         if not quoted_re.match(key_arg):
           # Need to create a fake position object for the

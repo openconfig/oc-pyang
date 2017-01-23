@@ -1,6 +1,7 @@
-module openconfig-testcase-succeed {
-  prefix "oc-tc";
-  namespace "http://openconfig.net/linter/testcase";
+submodule openconfig-submodule-succeed {
+  belongs-to openconfig-testcase-succeed {
+    prefix "oc-tc";
+  }
 
   import openconfig-extensions { prefix oc-ext; }
 
@@ -29,8 +30,7 @@ module openconfig-testcase-succeed {
 
   grouping testcase-top {
     description
-      "Top-level grouping that uses the 
-      word key in it";
+      "Top-level grouping";
 
     container test-container {
       list test-list {
@@ -57,4 +57,6 @@ module openconfig-testcase-succeed {
       }
     }
   }
+
+  uses testcase-top;
 }
