@@ -81,6 +81,10 @@ class PathPlugin(plugin.PyangPlugin):
                               action="store_true",
                               help="""Generate paths output for use with relocate
                               plugin"""),
+        optparse.make_option("--status",
+                              dest="print_status",
+                              action="store_true",
+                              help="""Display status information for non-current nodes"""),
                 ]
     g = optparser.add_option_group("paths output specific options")
     g.add_options(optlist)
@@ -139,6 +143,15 @@ def print_node(node, module, fd, prefix, ctx, level=0):
 
     path_components = [re_ns.sub('', comp) for comp in pathstr.split('/')]
     pathstr = '/'.join(path_components)
+
+  # collect status information if there is a substatement
+  status_stmnt = node.search_one('status')
+  if status_stmnt is not None:
+    status = status_stmnt.arg
+  else:
+    status = None;
+
+
   # annotate the leaf nodes only
   if node.keyword == 'leaf-list' or \
         (node.keyword == 'leaf' and not hasattr(node, 'i_is_key')):
@@ -155,7 +168,7 @@ def print_node(node, module, fd, prefix, ctx, level=0):
   else:
       config = None
 
-  pathstr = get_pathstr(pathstr, config, ctx, level)
+  pathstr = get_pathstr(pathstr, config, status, ctx, level)
 
   fd.write(pathstr)
 
@@ -175,7 +188,7 @@ def print_node(node, module, fd, prefix, ctx, level=0):
         print_children(node.i_children, module, fd, prefix, ctx, level)
 
 
-def get_pathstr(pathstr, config, ctx, level):
+def get_pathstr(pathstr, config, status, ctx, level):
 
   if ctx.opts.print_plain or ctx.opts.relocate_output:
     return pathstr
@@ -189,5 +202,8 @@ def get_pathstr(pathstr, config, ctx, level):
     s += '  [%s] %s' % (config, pathstr)
   else:
     s += '       %s' % (pathstr)
+
+  if status and ctx.opts.print_status:
+    s +='%s [%s]' % (s, status)
 
   return s
