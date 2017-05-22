@@ -38,6 +38,7 @@ to the YANG module(s).
 
 import optparse
 import sys
+import re
 
 from pyang import plugin
 from pyang import statements
@@ -57,6 +58,11 @@ class JSTreePlugin(plugin.PyangPlugin):
                                  action="store_true",
                                  help="""Do not include paths to make
                                        page less wide"""),
+            optparse.make_option("--oc-jstree-strip",
+                              dest="strip_namespace",
+                              action="store_true",
+                              help="""Strip namespace prefixes from
+                                path components"""),
             ]
 
         g = optparser.add_option_group("OpenConfig JSTree output specific options")
@@ -285,7 +291,14 @@ def emit_bodystart(modules, fd, ctx):
   <th align=left>Flags</th>
   <th align=left>Opts</th>
   <th align=left>Status</th>
+""")
+    if not ctx.opts.jstree_no_path:
+      fd.write("""
   <th align=left>Path</th>
+</tr>
+""")
+    else:
+      fd.write("""
 </tr>
 """)
 
@@ -441,9 +454,16 @@ def print_node(s, module, fd, prefix, ctx, level=0):
     for i in range(2,level+1):
         idstring += '-' + str(levelcnt[i])
 
-    pathstr = ""
+    pathstr = statements.mk_path_str(s, True)
     if not ctx.opts.jstree_no_path:
-        pathstr = statements.mk_path_str(s, True)
+        if ctx.opts.strip_namespace:
+          re_ns = re.compile(r'^.+:')
+          path_components = [re_ns.sub('', comp) for comp in pathstr.split('/')]
+          pathstr = '/'.join(path_components)
+    else:
+      # append the path to the description popup
+      descrstring = descrstring + "\n\npath: " + pathstr
+      pathstr = ""
 
     if '?' in options:
         fontstarttag = "<em>"
