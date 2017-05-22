@@ -146,7 +146,7 @@ class HTMLEmitter(DocEmitter):
     (prefix, last) = yangpath.remove_last(pathstr)
     prefix_name = ht.add_tag("span", prefix + "/", {"class":"statement-path"})
     statement_name = prefix_name + ht.br(level,True) + statement.name
-    s_div += ht.h4(statement_name, {"class":"statement-name","id":node_to_id(statement)},level,True)
+    s_div += ht.h4(statement_name, {"class":"statement-name","id":statement.attrs['id']},level,True)
 
     # node description
     if statement.attrs.has_key('desc'):
@@ -164,6 +164,13 @@ class HTMLEmitter(DocEmitter):
     keyword = statement.keyword + notes
     s_div += ht.para(ht.add_tag("span", "nodetype",{"class":"statement-info-label"}) + ": " + keyword,{"class":"statement-info-text"},level,True)
     # s_div += ht.para(ht.add_tag("span", "path",{"class":"statement-info-label"}) + ": " + pathstr,{"class":"statement-info-text"},level,True)
+
+    # handle list nodes
+    if statement.attrs['is_list']:
+      list_keys = ""
+      for key in statement.attrs['keys']:
+        list_keys += " [" + ht.add_tag("a", key[0], {"href":"#" + key[1]}) + "]"
+      s_div += ht.para(ht.add_tag("span", "list keys",{"class":"statement-info-label"}) + ": " + list_keys,{"class":"statement-info-text"},level,True)
 
     if statement.typedoc:
       s_div += gen_type_info(statement.typedoc, level)
@@ -338,7 +345,7 @@ def gen_nav(node, root_mod, level = 0):
   nav = ""
   if len(node.children) > 0:
     # print the current node (opening li element)
-    nav += " "*level + " <li>" + "<a href=\"#" + node_to_id(node) + "\">" + node.name + "</a>\n"
+    nav += " "*level + " <li>" + "<a href=\"#" + node.attrs['id'] + "\">" + node.name + "</a>\n"
     # start new list for the children
     nav += " "*level + " <ul>\n"
     level += 1
@@ -349,7 +356,7 @@ def gen_nav(node, root_mod, level = 0):
     nav += " "*current_level + "</li>\n"
   else:
     # no children -- just print the current node and return
-    nav += " "*current_level + " <li>" "<a href=\"#" + node_to_id(node) + "\">" + node.name + "</a>\n"
+    nav += " "*current_level + " <li>" "<a href=\"#" + node.attrs['id'] + "\">" + node.name + "</a>\n"
 
   return nav
 
@@ -359,13 +366,3 @@ def text_to_paragraphs(textblock):
 
   paras = textblock.split("\n\n")
   return paras
-
-def node_to_id(node):
-  """Given a node, return a string suitable as an HTML id attribute based on the
-  node's path"""
-
-  path = yangpath.strip_namespace(node.attrs['path'])
-  # remove leading slash
-  path = path.lstrip('/')
-  path = re.sub (r'\/', r'-', path)
-  return path.lower()
