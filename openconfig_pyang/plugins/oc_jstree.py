@@ -38,6 +38,7 @@ to the YANG module(s).
 
 import optparse
 import sys
+import re
 
 from pyang import plugin
 from pyang import statements
@@ -57,6 +58,11 @@ class JSTreePlugin(plugin.PyangPlugin):
                                  action="store_true",
                                  help="""Do not include paths to make
                                        page less wide"""),
+            optparse.make_option("--oc-jstree-strip",
+                              dest="strip_namespace",
+                              action="store_true",
+                              help="""Strip namespace prefixes from
+                                path components"""),
             ]
 
         g = optparser.add_option_group("OpenConfig JSTree output specific options")
@@ -121,17 +127,6 @@ ol#root  {padding-left: 5px; margin-top: 2px; margin-bottom: 1px;
 }
 
 .tier1  {margin-left: 0;     }
-.tier2  {margin-left: 1.5em; }
-.tier3  {margin-left: 3em;   }
-.tier4  {margin-left: 4.5em; }
-.tier5  {margin-left: 6em;   }
-.tier6  {margin-left: 7.5em; }
-.tier7  {margin-left: 9em;   }
-.tier8  {margin-left: 10.5em;}
-.tier9  {margin-left: 12em;  }
-.tier10 {margin-left: 13.5em;}
-.tier11 {margin-left: 15em;  }
-.tier12 {margin-left: 16.5em;}
 
 .level1 {padding-left: 0;    }
 .level2 {padding-left: 1em;  }
@@ -285,7 +280,14 @@ def emit_bodystart(modules, fd, ctx):
   <th align=left>Flags</th>
   <th align=left>Opts</th>
   <th align=left>Status</th>
+""")
+    if not ctx.opts.jstree_no_path:
+      fd.write("""
   <th align=left>Path</th>
+</tr>
+""")
+    else:
+      fd.write("""
 </tr>
 """)
 
@@ -441,9 +443,16 @@ def print_node(s, module, fd, prefix, ctx, level=0):
     for i in range(2,level+1):
         idstring += '-' + str(levelcnt[i])
 
-    pathstr = ""
+    pathstr = statements.mk_path_str(s, True)
     if not ctx.opts.jstree_no_path:
-        pathstr = statements.mk_path_str(s, True)
+        if ctx.opts.strip_namespace:
+          re_ns = re.compile(r'^.+:')
+          path_components = [re_ns.sub('', comp) for comp in pathstr.split('/')]
+          pathstr = '/'.join(path_components)
+    else:
+      # append the path to the description popup
+      descrstring = descrstring + "\n\npath: " + pathstr
+      pathstr = ""
 
     if '?' in options:
         fontstarttag = "<em>"
@@ -457,14 +466,14 @@ def print_node(s, module, fd, prefix, ctx, level=0):
            name = force_link(ctx,s,module,name)
         fd.write("""<tr id="%s" class="a">
                        <td nowrap id="p4000">
-                          <div id="p5000" class="tier%s">
+                          <div id="p5000" style="margin-left:%sem;">
                              <a href="#" id="p6000"
                                 onclick="toggleRows(this);return false"
                                 class="folder">&nbsp;
                              </a>
                              <abbr title="%s">%s</abbr>
                           </div>
-                       </td> \n""" %(idstring, level, descrstring, name))
+                       </td> \n""" %(idstring, (level * 1.5 - 1.5), descrstring, name))
         fd.write("""<td nowrap>%s</td>
                     <td nowrap>%s</td>
                     <td nowrap>%s</td>
@@ -493,7 +502,7 @@ def print_node(s, module, fd, prefix, ctx, level=0):
             typename = nodetype
         fd.write("""<tr id="%s" class="a">
                        <td nowrap>
-                          <div id=9999 class=tier%s>
+                          <div id=9999 style="margin-left: %sem;">
                              <a class="%s">&nbsp;</a>
                              <abbr title="%s"> %s %s %s</abbr>
                           </div>
@@ -504,7 +513,7 @@ def print_node(s, module, fd, prefix, ctx, level=0):
                        <td>%s</td>
                        <td>%s</td>
                        <td nowrap>%s</td</tr> \n""" %(idstring,
-                                                      level,
+                                                      (level * 1.5 - 1.5),
                                                       classstring,
                                                       descrstring,
                                                       fontstarttag,
