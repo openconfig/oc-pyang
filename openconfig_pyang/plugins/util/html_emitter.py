@@ -39,20 +39,20 @@ class HTMLEmitter(DocEmitter):
     mod_div = ht.open_tag("div", newline=True)
 
     # module name
-    mod_div += ht.h1(mod.module_name, {"class":"module-name", "id":("mod-" + ht.gen_html_id(mod.module_name))},2,True)
+    mod_div += ht.h1(mod.module_name, {"class": "module-name", "id": ("mod-" + ht.gen_html_id(mod.module_name))},2,True)
 
     if mod.module.attrs.has_key('version'):
-      mod_div += ht.h4("openconfig-version: " + mod.module.attrs['version'], {"class":"module-header"},2,True)
+      mod_div += ht.h4("openconfig-version: " + mod.module.attrs['version'], {"class": "module-header"},2,True)
 
     # module description header
-    mod_div += ht.h4("Description", {"class":"module-desc-header"},2,True)
+    mod_div += ht.h4("Description", {"class": "module-desc-header"},2,True)
 
     # module description text
     paragraphs = text_to_paragraphs(mod.module.attrs['desc'])
     for para in paragraphs:
-      mod_div += ht.para(para, {"class":"module-desc-text"},2,True)
+      mod_div += ht.para(para, {"class": "module-desc-text"},2,True)
 
-    mod_div += ht.h4("Imports", {"class":"module-header"},2,True)
+    mod_div += ht.h4("Imports", {"class": "module-header"},2,True)
     mod_div += "<p class=\"module-desc-text\">"
     for i in mod.module.attrs['imports']:
       mod_div += "%s<br>\n" % i
@@ -68,16 +68,16 @@ class HTMLEmitter(DocEmitter):
     # handle typedefs
     if len(mod.typedefs) > 0:
       types_div = ht.open_tag("div", newline=True)
-      types_div += ht.h3("Defined types", {"class":"module-types-header", "id":mod.module_name + "-defined-types"},2,True)
+      types_div += ht.h3("Defined types", {"class": "module-types-header", "id": mod.module_name + "-defined-types"},2,True)
 
       for (typename, td) in mod.typedefs.iteritems():
-        types_div += ht.h4(typename,{"class":"module-type-name","id":"type-" + ht.gen_html_id(typename)},2,True)
-        types_div += ht.para(ht.add_tag("span","description:" + ht.br(newline=True), {"class":"module-type-text-label"}) + td.attrs['desc'],{"class":"module-type-text"},2,True)
+        types_div += ht.h4(typename,{"class": "module-type-name","id": "type-" + ht.gen_html_id(typename)},2,True)
+        types_div += ht.para(ht.add_tag("span","description:" + ht.br(newline=True), {"class": "module-type-text-label"}) + td.attrs['desc'],{"class": "module-type-text"},2,True)
         types_div += gen_type_info(td.typedoc, 2)
 
         for prop in YangDocDefs.type_leaf_properties:
           if td.attrs.has_key(prop):
-            types_div += ht.para(ht.add_tag("span", prop,{"class":"module-type-text-label"}) + ": " + td.attrs[prop],{"class":"module-type-text"},2,True)
+            types_div += ht.para(ht.add_tag("span", prop,{"class": "module-type-text-label"}) + ": " + td.attrs[prop],{"class": "module-type-text"},2,True)
 
 
       types_div += ht.close_tag(newline=True)
@@ -91,11 +91,11 @@ class HTMLEmitter(DocEmitter):
     # handle identities
     if len(mod.identities) > 0:
       idents_div = ht.open_tag("div", newline=True)
-      idents_div += ht.h3("Identities", {"class":"module-types-header", "id":mod.module_name + "-identities"},2,True)
+      idents_div += ht.h3("Identities", {"class": "module-types-header", "id": mod.module_name + "-identities"},2,True)
 
       for base_id in mod.base_identities:
-        idents_div += ht.h4("base: " + base_id,{"class":"module-type-name","id":"ident-" + ht.gen_html_id(base_id)},2,True)
-        idents_div += ht.para(ht.add_tag("span","description:" + ht.br(newline=True), {"class":"module-type-text-label"}) + mod.identities[base_id].attrs['desc'],{"class":"module-type-text"},2,True)
+        idents_div += ht.h4("base: " + base_id,{"class": "module-type-name","id":"ident-" + ht.gen_html_id(base_id)},2,True)
+        idents_div += ht.para(ht.add_tag("span","description:" + ht.br(newline=True), {"class": "module-type-text-label"}) + mod.identities[base_id].attrs['desc'],{"class": "module-type-text"},2,True)
 
         # collect all of the identities that have base_id as
         # their base
@@ -103,9 +103,9 @@ class HTMLEmitter(DocEmitter):
         derived = { key:value for key,value in mod.identities.items() if value.attrs['base'] == base_id }
         # emit the identities derived from the current base
         for (idname, id) in derived.iteritems():
-          idents_div += ht.h4(idname,{"class":"module-type-name","id":"ident-" + ht.gen_html_id(idname)},2,True)
-          idents_div += ht.para(ht.add_tag("span","description:",{"class":"module-type-text-label"}) + ht.br(newline=True) + id.attrs['desc'],{"class":"module-type-text"},2,True)
-          idents_div += ht.para(ht.add_tag("span", "base identity: ",{"class":"module-type-text-label"})
+          idents_div += ht.h4(idname,{"class": "module-type-name","id":"ident-" + ht.gen_html_id(idname)},2,True)
+          idents_div += ht.para(ht.add_tag("span","description:",{"class": "module-type-text-label"}) + ht.br(newline=True) + id.attrs['desc'],{"class":"module-type-text"},2,True)
+          idents_div += ht.para(ht.add_tag("span", "base identity: ",{"class": "module-type-text-label"})
             + ht.add_tag("a", id.attrs['base'],{"href":"#ident-"+ht.gen_html_id(id.attrs['base'])}),
             {"class":"module-type-text"},2,True)
 
@@ -144,13 +144,13 @@ class HTMLEmitter(DocEmitter):
 
     # statement path and name
     (prefix, last) = yangpath.remove_last(pathstr)
-    prefix_name = ht.add_tag("span", prefix + "/", {"class":"statement-path"})
+    prefix_name = ht.add_tag("span", prefix + "/", {"class": "statement-path"})
     statement_name = prefix_name + ht.br(level,True) + statement.name
-    s_div += ht.h4(statement_name, {"class":"statement-name","id":statement.attrs['id']},level,True)
+    s_div += ht.h4(statement_name, {"class": "statement-name","id":statement.attrs['id']},level,True)
 
     # node description
     if statement.attrs.has_key('desc'):
-      s_div += ht.para(ht.add_tag("span", "description",{"class":"statement-info-label"}) + ":<br />" + statement.attrs['desc'],{"class":"statement-info-text"},level,True)
+      s_div += ht.para(ht.add_tag("span", "description",{"class": "statement-info-label"}) + ":<br />" + statement.attrs['desc'],{"class": "statement-info-text"},level,True)
     s_div += ht.close_tag(newline=True)
 
     # check for additional properties
@@ -162,7 +162,7 @@ class HTMLEmitter(DocEmitter):
     else:
       notes += " (ro)"
     keyword = statement.keyword + notes
-    s_div += ht.para(ht.add_tag("span", "nodetype",{"class":"statement-info-label"}) + ": " + keyword,{"class":"statement-info-text"},level,True)
+    s_div += ht.para(ht.add_tag("span", "nodetype",{"class": "statement-info-label"}) + ": " + keyword,{"class": "statement-info-text"},level,True)
     # s_div += ht.para(ht.add_tag("span", "path",{"class":"statement-info-label"}) + ": " + pathstr,{"class":"statement-info-text"},level,True)
 
     # handle list nodes
@@ -170,14 +170,14 @@ class HTMLEmitter(DocEmitter):
       list_keys = ""
       for key in statement.attrs['keys']:
         list_keys += " [" + ht.add_tag("a", key[0], {"href":"#" + key[1]}) + "]"
-      s_div += ht.para(ht.add_tag("span", "list keys",{"class":"statement-info-label"}) + ": " + list_keys,{"class":"statement-info-text"},level,True)
+      s_div += ht.para(ht.add_tag("span", "list keys",{"class": "statement-info-label"}) + ": " + list_keys,{"class": "statement-info-text"},level,True)
 
     if statement.typedoc:
       s_div += gen_type_info(statement.typedoc, level)
 
     for prop in YangDocDefs.type_leaf_properties:
       if statement.attrs.has_key(prop):
-        s_div += ht.para(ht.add_tag("span", prop, {"class":"statement-info-label"}) + ": " + statement.attrs[prop],{"class":"statement-info-text"},level,True)
+        s_div += ht.para(ht.add_tag("span", prop, {"class": "statement-info-label"}) + ": " + statement.attrs[prop],{"class": "statement-info-text"},level,True)
 
     # add this statement to the collection of data
     self.moduledocs[statement.module_doc.module_name]['data'] += s_div
@@ -198,7 +198,7 @@ class HTMLEmitter(DocEmitter):
         self.moduledocs[module_name]['data'] = ""
       else:
         # create the header for the data elements
-        hdr = ht.h3("Data elements", {"class":"module-types-header", "id":module_name + "-data"},2,True)
+        hdr = ht.h3("Data elements", {"class": "module-types-header", "id": module_name + "-data"},2,True)
         self.moduledocs[module_name]['data'] = hdr + self.moduledocs[module_name]['data']
 
       if section is not None:
@@ -230,7 +230,7 @@ def gen_type_info(typedoc, level=1):
   s = ""
 
   typename = typedoc.typename
-  s += ht.para(ht.add_tag("span", "type",{"class":"statement-info-label"}) + ": " + typename,{"class":"statement-info-text"},level,True)
+  s += ht.para(ht.add_tag("span", "type",{"class": "statement-info-label"}) + ": " + typename,{"class": "statement-info-text"},level,True)
 
   if typename == 'enumeration':
     s += " "*level + "<ul>\n"
