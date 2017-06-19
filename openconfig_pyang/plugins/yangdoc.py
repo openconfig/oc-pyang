@@ -359,11 +359,26 @@ def collect_child_doc (node, parent, top):
   path = statements.mk_path_str(node, True)
   statement.attrs['path'] = path
 
+  # id based on schema path
+  node_id = node_to_id(statement)
+  statement.attrs['id'] = node_id
+
   # rw or ro info
   if hasattr(node, 'i_config'):
     statement.attrs['config'] = node.i_config
 
-  # list keys
+  # for list nodes, record the keys
+  if statement.keyword == 'list':
+    statement.attrs['is_list'] = True
+    keys = []
+    for key in node.i_key:
+      keypath = statements.mk_path_str(key, True)
+      keys.append((key.arg, path_to_id(keypath)))
+    statement.attrs['keys'] = keys
+  else:
+    statement.attrs['is_list'] = False
+
+  # note nodes that are list keys
   if hasattr(node, 'i_is_key'):
     statement.attrs['is_key'] = node.i_is_key
   else:
@@ -415,6 +430,21 @@ def collect_type_docs (typest, typedoc):
 
   # TODO: should probably collect substatements as they are usually
   # restrictions on the value, which are useful to document.
+
+def node_to_id(node):
+  """Given a node, return a string suitable as an HTML id attribute based on the
+  node's path"""
+
+  return path_to_id(node.attrs['path'])
+
+def path_to_id(nodepath):
+  """Given a path, return a string suitable as an HTML id attribute"""
+
+  path = yangpath.strip_namespace(nodepath)
+  # remove leading slash
+  path = path.lstrip('/')
+  path = re.sub (r'\/', r'-', path)
+  return path.lower()
 
 
 
