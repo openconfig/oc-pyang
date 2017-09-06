@@ -7,7 +7,7 @@ module openconfig-testcase-fail {
   include openconfig-submodule-fail;
 
   description
-    "Success testcase to check compliance with quoting
+    "Failure testcase to check compliance with quoting
     the key of a list";
 
   oc-ext:openconfig-version "0.0.1";

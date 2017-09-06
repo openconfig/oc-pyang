@@ -30,7 +30,7 @@ module openconfig-testcase-succeed {
   grouping testcase-top {
     description
       "Top-level grouping that uses the 
-      word key in it";
+      word key in it, but not as a list key.";
 
     container test-container {
       list test-list {
