@@ -21,7 +21,7 @@ modules according the YANG usage guidelines in RFC 6087.
 
 from __future__ import print_function
 
-from enum import Enum
+from enum import IntEnum, Enum
 import optparse
 import os.path
 from pyang import error
@@ -39,7 +39,7 @@ INSTANTIATED_DATA_KEYWORDS = [u"leaf", u"leaf-list", u"container", u"list",
 LEAFNODE_KEYWORDS = [u"leaf", u"leaf-list"]
 
 
-class ErrorLevel(Enum):
+class ErrorLevel(IntEnum):
   """An enumeration of the Pyang error levels.
 
      - Critical errors are those that are fatal for parsing.
@@ -279,7 +279,7 @@ class OpenConfigPlugin(lint.LintPlugin):
     # references to nodes in the same module / namespace should use relative
     # paths
     error.add_error_code(
-        "OC_RELATIVE_PATH", ErrorLevel.MINOR,
+        "OC_RELATIVE_PATH", ErrorLevel.WARNING,
         "\"%s\" path reference \"%s\" is intra-module but uses absolute path")
 
     # a config leaf does not have a mirrored applied config leaf in the state
@@ -408,6 +408,7 @@ class OCLintStages(object):
     """
     validmap = {
         u"module": [OCLintFunctions.check_module_rawtext],
+        u"submodule": [OCLintFunctions.check_module_rawtext],
     }
 
     for fn in OCLintStages.map_statement_to_lint_fn(stmt, validmap):
@@ -551,7 +552,8 @@ class OCLintFunctions(object):
               "Couldn't open module %s" % stmt.pos.ref)
       return
 
-    key_re = re.compile(r"^([ ]+)key([ ]+)(?P<arg>.*);$")
+    #key_re = re.compile(r"^([ ]+)?key([ ]+)(?P<arg>[^\"]);$")
+    key_re = re.compile(r"^([ ]+)?key([ ]+)(?P<arg>[^\"][a-zA-Z0-9\-_]+);$")
     quoted_re = re.compile(r"^\".*\"$")
 
     ln_count = 0
@@ -881,8 +883,19 @@ class OCLintFunctions(object):
       namespace = stmt.i_module.i_prefix
 
     mod_prefix = stmt.i_module.i_prefix
+
     if namespace == mod_prefix and abspath:
-      err_add(ctx.errors, stmt.pos, "OC_RELATIVE_PATH",
+      # Don't throw a warning if the absolute path is within the
+      # current module if the statement is within a typedef. This
+      # allows types to be defined that refer to an element of a
+      # module without errors being generated.
+      is_typedef = False
+      if stmt.parent is not None and stmt.parent.parent is not None:
+        if stmt.parent.parent.keyword == "typedef":
+          is_typedef = True
+
+      if not is_typedef:
+        err_add(ctx.errors, stmt.pos, "OC_RELATIVE_PATH",
               (stmt.keyword, stmt.arg))
 
   @staticmethod
