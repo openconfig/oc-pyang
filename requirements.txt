@@ -1,5 +1,5 @@
-enum==0.4.6
 Jinja2==2.8
+enum34==1.1.6
 lxml==3.6.4
 MarkupSafe==0.23
 pyang==1.7
