@@ -1,0 +1,23 @@
+module openconfig-testcase-fail {
+  prefix "oc-tc";
+  namespace "http://openconfig.net/linter/testcase";
+
+  import openconfig-extensions { prefix oc-ext; }
+
+  include openconfig-submodule-fail;
+
+  description
+    "Failure testcase to check compliance with quoting
+    the key of a list";
+
+  oc-ext:openconfig-version "0.0.1";
+
+  revision 2016-09-28 {
+    reference "0.0.1";
+    description
+      "Revision statement";
+  }
+
+  grouping empty-top { }
+}
+

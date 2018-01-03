@@ -7,5 +7,6 @@ ok:
 
 broken:
 	pyang --plugindir $(PLUGIN_DIR) \
+	    -E OC_RELATIVE_PATH \
 	    --openconfig --oc-only -p ${ROOT_DIR}/../common \
 			    ${ROOT_DIR}/openconfig-testcase-fail.yang
