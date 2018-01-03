@@ -300,10 +300,11 @@ class OpenConfigPlugin(lint.LintPlugin):
         "OC_LIST_NO_ENCLOSING_CONTAINER", ErrorLevel.MAJOR,
         "List %s does not have a surrounding container")
 
-    # a list has a duplicate name when the surrounding container is
-    # removed.
+    # when path compression is performed, the containers surrounding
+    # lists are removed, if there are two lists with the same name
+    # this results in a name collision.
     error.add_error_code(
-        "OC_LIST_DUPLICATE_COMPRESED_NAME", ErrorLevel.MAJOR,
+        "OC_LIST_DUPLICATE_COMPRESSED_NAME", ErrorLevel.MAJOR,
         "List %s has a duplicate name when the parent container %s" + \
         " is removed.")
 
@@ -801,7 +802,7 @@ class OCLintFunctions(object):
         if len(ch.i_children) == 1 and ch.i_children[0].arg == stmt.arg \
             and ch.i_children[0].keyword == "list":
           err_add(ctx.errors, stmt.parent.pos,
-              "OC_LIST_DUPLICATE_COMPRESED_NAME",
+              "OC_LIST_DUPLICATE_COMPRESSED_NAME",
               (stmt.arg, stmt.parent.arg))
 
     if parent_substmts != [stmt.arg]:
