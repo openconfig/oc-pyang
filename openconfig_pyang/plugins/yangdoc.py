@@ -38,9 +38,9 @@ def pyang_plugin_init():
     plugin.register_plugin(DocsPlugin())
 
 
-class DocsPlugin (plugin.PyangPlugin):
+class DocsPlugin(plugin.PyangPlugin):
 
-  def add_output_format (self, fmts):
+  def add_output_format(self, fmts):
     self.multiple_modules = True
     fmts['docs'] = self
 
@@ -93,7 +93,7 @@ class ModuleDoc:
   the top-level StatementDoc object (i.e., with the 'module' statement).
   """
 
-  def __init__ (self, name):
+  def __init__(self, name):
     self.module_name = name
 
     # module is a reference to a StatementDoc object corresponding
@@ -127,7 +127,7 @@ class TypeStatementDoc:
     types -- this class contains the hierarchy of types attached
     to a single StatementDoc object."""
 
-    def __init__ (self, typename=None):
+    def __init__(self, typename=None):
 
       self.typename = typename
       self.attrs = {}
@@ -156,7 +156,7 @@ class StatementDoc:
   a specific statement (e.g., leaf, container, list, etc.) The
   StatementDoc object is associated with its module"""
 
-  def __init__ (self, name, keyword):
+  def __init__(self, name, keyword):
     self.name = name
     self.keyword = keyword
 
@@ -204,8 +204,8 @@ def emit_docs(ctx, modules, fd):
   ctx.mod_docs = []
   ctx.skip_keywords = []
   for module in modules:
-    mod = collect_docs (module, ctx)
-    ctx.mod_docs.append (mod)
+    mod = collect_docs(module, ctx)
+    ctx.mod_docs.append(mod)
 
   if ctx.opts.no_structure:
     ctx.skip_keywords = ['container', 'list']
@@ -226,14 +226,14 @@ def emit_docs(ctx, modules, fd):
 
   fd.write(docs)
 
-def emit_child (node, emitter, ctx, fd, level=1):
+def emit_child(node, emitter, ctx, fd, level=1):
 
   emitter.genStatementDoc(node, ctx, level)
 
   if len(node.children) > 0:
     level += 1
   for child in node.children:
-    emit_child (child, emitter, ctx, fd, level)
+    emit_child(child, emitter, ctx, fd, level)
 
   # gen_docs_html(mod, ctx, fd)
 
@@ -244,21 +244,21 @@ def collect_docs(module, ctx):
   pyang Statement object"""
 
   # create the top level container for this module
-  modtop = ModuleDoc (module.i_modulename)
+  modtop = ModuleDoc(module.i_modulename)
 
   # create the root StatementDoc object for the module
-  mod = StatementDoc (module.i_modulename, module.keyword)
+  mod = StatementDoc(module.i_modulename, module.keyword)
   modtop.module = mod
 
   # get the description text
-  description = module.search_one ('description')
+  description = module.search_one('description')
   mod.attrs['desc'] = description.arg
 
   # get the prefix used by the module
   mod.attrs['prefix'] = module.i_prefix
 
   # get the list of imported modules
-  imports = module.search ('import')
+  imports = module.search('import')
   mod.attrs['imports'] = []
   for imp in imports:
     mod.attrs['imports'].append(imp.arg)
@@ -270,23 +270,23 @@ def collect_docs(module, ctx):
     mod.attrs['version'] = version.arg
   # collect identities
   for (name, identity) in module.i_identities.iteritems():
-    collect_identity_doc (identity, modtop)
+    collect_identity_doc(identity, modtop)
   # collect typedefs
   for (name, typedef) in module.i_typedefs.iteritems():
-    collect_typedef_doc (typedef, modtop)
+    collect_typedef_doc(typedef, modtop)
   # collect elements
   for child in module.i_children:
-    collect_child_doc (child, mod, modtop)
+    collect_child_doc(child, mod, modtop)
 
   return modtop
 
-def collect_identity_doc (identity, mod):
+def collect_identity_doc(identity, mod):
   """Collect documentation fields for YANG identities"""
   id = StatementDoc (identity.arg, identity.keyword)
-  desc = identity.search_one ('description')
+  desc = identity.search_one('description')
   if desc is not None:
     id.attrs['desc'] = desc.arg
-  base = identity.search_one ('base')
+  base = identity.search_one('base')
   if base is not None:
     # this is derived identity
     id.attrs['base'] = base.arg
@@ -300,10 +300,10 @@ def collect_identity_doc (identity, mod):
   # add the identity to the module object
   mod.identities[id.name] =  id
 
-def collect_typedef_doc (typedef, mod):
+def collect_typedef_doc(typedef, mod):
   """Collect documentation fields for YANG typedefs"""
-  td = StatementDoc (typedef.arg, typedef.keyword)
-  desc = typedef.search_one ('description')
+  td = StatementDoc(typedef.arg, typedef.keyword)
+  desc = typedef.search_one('description')
   if desc is not None:
     td.attrs['desc'] = desc.arg
 
@@ -312,21 +312,21 @@ def collect_typedef_doc (typedef, mod):
     if prop is not None:
       td.attrs[p] = prop.arg
 
-  typest = typedef.search_one ('type')
+  typest = typedef.search_one('type')
   if typest is not None:
-    typedoc = TypeStatementDoc ()
+    typedoc = TypeStatementDoc()
     td.typedoc = typedoc
     collect_type_docs(typest, typedoc)
   # add the typedef to the module object
   mod.typedefs[td.name] =  td
 
-def collect_child_doc (node, parent, top):
+def collect_child_doc(node, parent, top):
   """Collect documentation fields for a statement.  node
   is a PYANG statement object, while parent is a ModuleDoc
   or StatementDoc object. top is the top level ModuleDoc
   object"""
 
-  statement = StatementDoc (node.arg, node.keyword)
+  statement = StatementDoc(node.arg, node.keyword)
   statement.parent = parent
   statement.module_doc = top
   parent.children.append(statement)
@@ -334,14 +334,14 @@ def collect_child_doc (node, parent, top):
   # fill in some attributes if they exist
 
   # type information
-  type = node.search_one ('type')
+  type = node.search_one('type')
   if type is not None:
     # create the Type object
     statement.typedoc = TypeStatementDoc()
     collect_type_docs(type, statement.typedoc)
 
   # node description
-  desc = node.search_one ('description')
+  desc = node.search_one('description')
   if desc is not None:
     statement.attrs['desc'] = desc.arg
 
@@ -390,9 +390,9 @@ def collect_child_doc (node, parent, top):
     statement.attrs['is_key'] = False
 
   # collect data from children, i.e., depth-first
-  if hasattr (node, 'i_children'):
+  if hasattr(node, 'i_children'):
     for child in node.i_children:
-      collect_child_doc (child, statement,top)
+      collect_child_doc(child, statement,top)
 
 def collect_type_docs (typest, typedoc):
   """Given a pyang type statement object, populates information
@@ -405,7 +405,7 @@ def collect_type_docs (typest, typedoc):
   # based on the type, collect further properties
   if typest.arg == 'identityref':
     # base must be set for an identityref type
-    base = typest.search_one ('base')
+    base = typest.search_one('base')
     typedoc.attrs['base'] = base.arg
   elif typest.arg == 'enumeration':
     # collect the enums into a dict of enumvalue:description
@@ -433,7 +433,7 @@ def collect_type_docs (typest, typedoc):
       # create a new typedoc
       utype = TypeStatementDoc(type.arg)
       typedoc.childtypes.append(utype)
-      collect_type_docs (type, utype)
+      collect_type_docs(type, utype)
 
   # TODO(aashaikh): should collect substatements as they are usually
   # restrictions on the value, which are useful to document.
@@ -450,7 +450,7 @@ def path_to_id(nodepath):
   path = yangpath.strip_namespace(nodepath)
   # remove leading slash
   path = path.lstrip('/')
-  path = re.sub (r'\/', r'-', path)
+  path = re.sub(r'\/', r'-', path)
   return path.lower()
 
 

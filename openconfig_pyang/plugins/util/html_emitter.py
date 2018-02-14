@@ -218,7 +218,7 @@ class HTMLEmitter(DocEmitter):
     else:
       doc_title = ctx.opts.doc_title
 
-    s = populate_template (doc_title, docs, navs, navids)
+    s = populate_template(doc_title, docs, navs, navids)
 
     return s
 
@@ -325,7 +325,7 @@ def gen_nav_tree(emitter, root_mod, level=0):
     nav += "<li><a href=\"#%s-data\">%s</a>\n" % (root_mod.module_name, "Data elements")
     nav += "<ul>\n"
     for child in top.children:
-      nav += gen_nav (child, root_mod, level)
+      nav += gen_nav(child, root_mod, level)
     nav += "</li>\n"
     nav += "</ul>\n"
 
