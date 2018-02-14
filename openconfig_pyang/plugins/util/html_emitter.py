@@ -229,6 +229,7 @@ def gen_type_info(typedoc, level=1):
   ht = html_helper.HTMLHelper()
   s = ""
 
+  # emit type-specific attributes
   typename = typedoc.typename
   s += ht.para(ht.add_tag("span", "type",{"class": "statement-info-label"}) + ": " + typename,{"class": "statement-info-text"},level,True)
 

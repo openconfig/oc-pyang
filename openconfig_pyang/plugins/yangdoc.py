@@ -355,6 +355,11 @@ def collect_child_doc (node, parent, top):
   if default is not None:
     statement.attrs['default'] = default.arg
 
+  # units statement
+  units = node.search_one('units')
+  if units is not None:
+    statement.attrs['units'] = units.arg
+
   # schema path for the current node
   path = statements.mk_path_str(node, True)
   statement.attrs['path'] = path
@@ -396,6 +401,8 @@ def collect_type_docs (typest, typedoc):
   unions, enumeration"""
 
   typedoc.typename = typest.arg
+
+  # based on the type, collect further properties
   if typest.arg == 'identityref':
     # base must be set for an identityref type
     base = typest.search_one ('base')
@@ -428,7 +435,7 @@ def collect_type_docs (typest, typedoc):
       typedoc.childtypes.append(utype)
       collect_type_docs (type, utype)
 
-  # TODO: should probably collect substatements as they are usually
+  # TODO(aashaikh): should collect substatements as they are usually
   # restrictions on the value, which are useful to document.
 
 def node_to_id(node):
