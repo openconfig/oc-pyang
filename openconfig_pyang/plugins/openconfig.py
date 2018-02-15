@@ -21,7 +21,7 @@ modules according the YANG usage guidelines in RFC 6087.
 
 from __future__ import print_function
 
-from enum import IntEnum, Enum
+from enum import IntEnum
 import optparse
 import os.path
 from pyang import error
@@ -56,7 +56,7 @@ class ErrorLevel(IntEnum):
   WARNING = 4
 
 
-class ModuleType(Enum):
+class ModuleType(IntEnum):
   """An enumeration describing the type of module.
 
     OCINFRA: A model that does not need to be validated.
@@ -299,6 +299,14 @@ class OpenConfigPlugin(lint.LintPlugin):
     error.add_error_code(
         "OC_LIST_NO_ENCLOSING_CONTAINER", ErrorLevel.MAJOR,
         "List %s does not have a surrounding container")
+
+    # when path compression is performed, the containers surrounding
+    # lists are removed, if there are two lists with the same name
+    # this results in a name collision.
+    error.add_error_code(
+        "OC_LIST_DUPLICATE_COMPRESSED_NAME", ErrorLevel.MAJOR,
+        "List %s has a duplicate name when the parent container %s" + \
+        " is removed.")
 
     # a module defines data nodes at the top-level
     error.add_error_code(
@@ -773,7 +781,8 @@ class OCLintFunctions(object):
 
   @staticmethod
   def check_list_enclosing_container(ctx, stmt):
-    """Check that a list has an enclosing container.
+    """Check that a list has an enclosing container and that its
+    name is not duplicated when path compression is performed.
 
     Args:
       ctx: pyang.Context for the validation
@@ -786,6 +795,15 @@ class OCLintFunctions(object):
     if stmt.parent.keyword != "container":
       err_add(ctx.errors, stmt.parent.pos,
               "OC_LIST_NO_ENCLOSING_CONTAINER", stmt.arg)
+
+    grandparent = stmt.parent.parent
+    for ch in grandparent.i_children:
+      if ch.keyword == "container" and ch.arg != stmt.parent.arg:
+        if len(ch.i_children) == 1 and ch.i_children[0].arg == stmt.arg \
+            and ch.i_children[0].keyword == "list":
+          err_add(ctx.errors, stmt.parent.pos,
+              "OC_LIST_DUPLICATE_COMPRESSED_NAME",
+              (stmt.arg, stmt.parent.arg))
 
     if parent_substmts != [stmt.arg]:
       remaining_parent_substmts = [i.arg for i in stmt.parent.i_children
