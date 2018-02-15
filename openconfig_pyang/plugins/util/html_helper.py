@@ -147,7 +147,7 @@ class HTMLHelper:
     """Given a string, transforms into a suitable html id"""
     id = text.lstrip('_/- ')
     id = re.sub(r'[ /]', r'-', text)
-    return (id.lower().strip())
+    return id.lower().strip()
 
 def get_attr_str(attrs):
   elem_attrs = []
