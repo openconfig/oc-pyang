@@ -38,6 +38,9 @@ INSTANTIATED_DATA_KEYWORDS = [u"leaf", u"leaf-list", u"container", u"list",
                               u"choice"]
 LEAFNODE_KEYWORDS = [u"leaf", u"leaf-list"]
 
+# YANG types that should not be used in OpenConfig models.
+BAD_TYPES = [u"empty", u"bits"]
+
 
 class ErrorLevel(IntEnum):
   """An enumeration of the Pyang error levels.
@@ -373,6 +376,12 @@ class OpenConfigPlugin(lint.LintPlugin):
         "OC_KEY_ARGUMENT_UNQUOTED", ErrorLevel.MINOR,
         "All key arguments of a list should be quoted (%s is not)")
 
+    # bad type was used for a leaf or typedef
+    error.add_error_code(
+      "OC_BAD_TYPE", ErrorLevel.MAJOR,
+      "Bad type %s used in leaf or typedef",
+    )
+
 
 class OCLintStages(object):
   """Containing class for OpenConfig linter stages.
@@ -440,6 +449,7 @@ class OCLintStages(object):
         ],
         u"LEAVES": [
             OCLintFunctions.check_enumeration_style,
+            OCLintFunctions.check_bad_types,
         ],
         u"identity": [
             OCLintFunctions.check_identity_style,
@@ -454,7 +464,10 @@ class OCLintStages(object):
         ],
         u"path": [
             OCLintFunctions.check_relative_paths,
-        ]
+        ],
+        u"typedef": [
+            OCLintFunctions.check_typedef_style,
+        ],
     }
 
     for fn in OCLintStages.map_statement_to_lint_fn(stmt, validmap):
@@ -560,7 +573,6 @@ class OCLintFunctions(object):
               "Couldn't open module %s" % stmt.pos.ref)
       return
 
-    #key_re = re.compile(r"^([ ]+)?key([ ]+)(?P<arg>[^\"]);$")
     key_re = re.compile(r"^([ ]+)?key([ ]+)(?P<arg>[^\"][a-zA-Z0-9\-_]+);$")
     quoted_re = re.compile(r"^\".*\"$")
 
@@ -695,6 +707,41 @@ class OCLintFunctions(object):
       elif not re.match(r"^[A-Z0-9][A-Z0-9\_\.]+$", enum.arg):
         err_add(ctx.errors, stmt.pos, "OC_ENUM_UNDERSCORES",
                 (enum.arg, enum.arg.upper()))
+
+  @staticmethod
+  def check_bad_types(ctx, stmt):
+    """Check validation rules for bad types that should not
+    be used in OpenConfig models.
+
+    Args:
+      ctx: pyang.Context for validation
+      stmt: pyang.Statement representing a leaf or leaf-list
+    """
+    elemtype = stmt.search_one("type")
+    if elemtype is None or elemtype.arg not in BAD_TYPES:
+      return
+
+    err_add(ctx.errors, stmt.pos, "OC_BAD_TYPE",
+      (elemtype.arg))
+
+  @staticmethod
+  def check_typedef_style(ctx, stmt):
+    """Check validation rules for OpenConfig typedef
+    statements.
+
+    Args:
+      ctx: pyang.Context for validation
+      stmt: pyang.Statement representing a typedef.
+    """
+
+    elemtype = stmt.search_one("type")
+    if elemtype is None:
+      return
+
+    # errors are appended to the context, such that we can just call the
+    # base checks here.
+    OCLintFunctions.check_enumeration_style(ctx, stmt)
+    OCLintFunctions.check_bad_types(ctx, stmt)
 
   @staticmethod
   def check_identity_style(ctx, stmt):

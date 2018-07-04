@@ -1,0 +1,43 @@
+module openconfig-testcase-succeed {
+  prefix "oc-tc";
+  namespace "http://openconfig.net/linter/testcase";
+
+  import openconfig-extensions { prefix oc-ext; }
+
+  description
+    "Success test case for case of enumeration within
+     a typedef in an OpenConfig model";
+
+  oc-ext:openconfig-version "0.0.1";
+
+  revision 2016-09-28 {
+    reference "0.0.1";
+    description
+      "Revision statement";
+  }
+
+  typedef lower-enum {
+    type enumeration {
+      enum UPPERCASE;
+    }
+  }
+
+  grouping testcase-config {
+    leaf enumeration {
+      type lower-enum;
+    }
+  }
+
+  grouping testcase-top {
+    container config {
+      uses testcase-config;
+    }
+
+    container state {
+      config false;
+      uses testcase-config;
+    }
+  }
+
+  uses testcase-top;
+}

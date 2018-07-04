@@ -15,18 +15,18 @@ limitations under the License.
 setup_tools file definition for oc-pyang.
 """
 
-from os import path
-from pip.req import parse_requirements
+import os
 from setuptools import find_packages
 from setuptools import setup
 from codecs import open
 
 import openconfig_pyang
 
-thisdir = path.abspath(path.dirname(__file__))
-pip_reqs = parse_requirements(path.join(thisdir, "requirements.txt"),
-                              session=False)
-inst_reqs = [str(ir.req) for ir in pip_reqs]
+# allow setup.py to be run from any path
+os.chdir(os.path.normpath(os.path.join(os.path.abspath(__file__), os.pardir)))
+
+with open("requirements.txt", "r") as fp:
+    reqs = [r for r in fp.read().splitlines() if (len(r) > 0 and not r.startswith("#"))]
 
 setup(
     name="openconfig_pyang",
@@ -54,6 +54,6 @@ setup(
     include_package_data=True,
     keywords="yang pyang openconfig",
     packages=find_packages(),
-    install_requires=inst_reqs,
+    install_requires=reqs,
     zip_safe=False,
 )
