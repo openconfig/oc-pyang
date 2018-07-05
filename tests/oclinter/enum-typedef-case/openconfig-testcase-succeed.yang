@@ -16,7 +16,7 @@ module openconfig-testcase-succeed {
       "Revision statement";
   }
 
-  typedef lower-enum {
+  typedef upper-enum {
     type enumeration {
       enum UPPERCASE;
     }
@@ -24,7 +24,7 @@ module openconfig-testcase-succeed {
 
   grouping testcase-config {
     leaf enumeration {
-      type lower-enum;
+      type upper-enum;
     }
   }
 

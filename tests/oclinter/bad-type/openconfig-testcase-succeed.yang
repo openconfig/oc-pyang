@@ -17,7 +17,7 @@ module openconfig-testcase-succeed {
   }
 
   grouping testcase-config {
-    leaf bad {
+    leaf good {
       type string;
     }
   }
