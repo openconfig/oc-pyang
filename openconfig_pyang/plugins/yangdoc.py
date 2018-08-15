@@ -414,7 +414,8 @@ def collect_type_docs (typest, typedoc):
     for enum in enums:
       enumdesc = enum.search_one('description')
       # generally expect a description substatement, but it might be None
-      typedoc.attrs['enums'][enum.arg] = enumdesc.arg
+      if enumdesc is not None:
+        typedoc.attrs['enums'][enum.arg] = enumdesc.arg
   elif typest.arg == 'leafref':
     ref_path = typest.search_one('path')
     typedoc.attrs['leafref_path'] = yangpath.strip_namespace(ref_path.arg)
