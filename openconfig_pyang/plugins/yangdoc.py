@@ -252,7 +252,10 @@ def collect_docs(module, ctx):
 
   # get the description text
   description = module.search_one('description')
-  mod.attrs['desc'] = description.arg
+  if description:
+    mod.attrs['desc'] = description.arg
+  else:
+    mod.attrs['desc'] = ''
 
   # get the prefix used by the module
   mod.attrs['prefix'] = module.i_prefix
