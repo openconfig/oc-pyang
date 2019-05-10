@@ -126,6 +126,11 @@ class OpenConfigPlugin(lint.LintPlugin):
                              action="store_true",
                              help="""Do not include standard lint (RFC 6087)
                              checking"""),
+        optparse.make_option("--allowed-prefixes",
+                             dest="allowed_prefixes",
+                             action="store",
+                             type="string",
+                             help="""Allowed prefixes separated by ':'"""),
         ]
     g = optparser.add_option_group("OpenConfig specific options")
     g.add_options(optlist)
@@ -136,6 +141,8 @@ class OpenConfigPlugin(lint.LintPlugin):
     if not ctx.opts.openconfig_only:
       # Support IETF as a prefix for modules
       self.modulename_prefixes.extend(["ietf", "iana"])
+      if ctx.opts.allowed_prefixes:
+          self.modulename_prefixes.extend(ctx.opts.allowed_prefixes.split(':'))
 
       # We do not want all RFC6087 rules, so we need to borrow some
       # from the standard linter. We cannot simply call the _setup_ctx
