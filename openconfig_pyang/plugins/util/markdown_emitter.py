@@ -18,9 +18,9 @@ Implements a Markdown documentation emitter for YANG modules
 
 """
 
-from doc_emitter import DocEmitter
+from .doc_emitter import DocEmitter
 import yangpath
-import markdown_helper
+from . import markdown_helper
 
 class MarkdownEmitter(DocEmitter):
 

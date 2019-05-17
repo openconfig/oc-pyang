@@ -252,7 +252,10 @@ def collect_docs(module, ctx):
 
   # get the description text
   description = module.search_one('description')
-  mod.attrs['desc'] = description.arg
+  if description:
+    mod.attrs['desc'] = description.arg
+  else:
+    mod.attrs['desc'] = ""
 
   # get the prefix used by the module
   mod.attrs['prefix'] = module.i_prefix
@@ -269,10 +272,10 @@ def collect_docs(module, ctx):
   if version is not None:
     mod.attrs['version'] = version.arg
   # collect identities
-  for (name, identity) in module.i_identities.iteritems():
+  for (name, identity) in module.i_identities.items():
     collect_identity_doc(identity, modtop)
   # collect typedefs
-  for (name, typedef) in module.i_typedefs.iteritems():
+  for (name, typedef) in module.i_typedefs.items():
     collect_typedef_doc(typedef, modtop)
   # collect elements
   for child in module.i_children:
