@@ -4,6 +4,7 @@ python:
             - "3.6"
 script:
             - "./tests/packaging.sh"
+            - "black -l 100 --check"
 branches:
         only:
             - master
