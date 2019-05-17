@@ -31,16 +31,15 @@ with open("requirements.txt", "r") as fp:
 setup(
     name="openconfig_pyang",
     version=openconfig_pyang.__version__,
-    description=("OpenConfig Pyang provides plugins for the Pyang validator "
-                 "that provide functionality which relates to OpenConfig "
-                 " data models. Particularly, it provides a linter, path "
-                 " extractor, and documentation generator."),
-
+    description=(
+        "OpenConfig Pyang provides plugins for the Pyang validator "
+        "that provide functionality which relates to OpenConfig "
+        " data models. Particularly, it provides a linter, path "
+        " extractor, and documentation generator."
+    ),
     url="https://github.com/openconfig/oc-pyang",
-
     author="The OpenConfig Authors",
     author_email="netopenconfig@googlegroups.com",
-
     license="Apache",
     classifiers=[
         "Development Status :: 4 - Beta",
@@ -49,7 +48,7 @@ setup(
         "Topic :: Software Development :: Code Generators",
         "License :: OSI Approved :: Apache Software License",
         "Programming Language :: Python :: 2.7",
-        "Programming Language :: Python :: 2 :: Only"
+        "Programming Language :: Python :: 2 :: Only",
     ],
     include_package_data=True,
     keywords="yang pyang openconfig",

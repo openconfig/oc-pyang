@@ -18,67 +18,67 @@ Helper class to generate Markdown syntax
 
 """
 
+
 class MarkdownHelper:
+    def h1(self, text):
+        return "# " + text + " #"
 
-  def h1(self, text):
-    return "# " + text + " #"
+    def h2(self, text):
+        return "#" * 2 + " " + text + " " + "#" * 2
 
-  def h2(self, text):
-    return "#" * 2 + " " + text + " " + "#" * 2
+    def h3(self, text):
+        return "#" * 3 + " " + text + " " + "#" * 3
 
-  def h3(self, text):
-    return "#" * 3 + " " + text + " " + "#" * 3
+    def h4(self, text):
+        return "#" * 4 + " " + text + " " + "#" * 4
 
-  def h4(self, text):
-    return "#" * 4 + " " + text + " " + "#" * 4
+    def h5(self, text):
+        return "#" * 5 + " " + text + " " + "#" * 5
 
-  def h5(self, text):
-    return "#" * 5 + " " + text + " " + "#" * 5
+    def h6(self, text):
+        return "#" * 6 + " " + text + " " + "#" * 6
 
-  def h6(self, text):
-    return "#" * 6 + " " + text + " " + "#" * 6
+    def h(self, size, text):
+        if size < 1:
+            return self.h1(text)
+        elif size > 6:
+            return self.h6(text)
+        else:
+            return getattr(self, "h" + str(size))(text)
 
-  def h(self, size, text):
-    if size < 1:
-      return self.h1(text)
-    elif size > 6:
-      return self.h6(text)
-    else:
-      return getattr(self, 'h'+str(size))(text)
+    def ul(self, list):
+        s = ""
+        for item in list:
+            # strips all newlines before adding a single one -- effectively
+            # prevents the markdown that causes list items to be wrapped in
+            # paragraph tags
+            s += "* " + str(item).strip("\n") + "\n"
 
-  def ul(self, list):
-    s = ''
-    for item in list:
-      # strips all newlines before adding a single one -- effectively
-      # prevents the markdown that causes list items to be wrapped in
-      # paragraph tags
-      s += "* " + str(item).strip('\n') + "\n"
+        return s
 
-    return s
+    def ol(self, list):
+        s = ""
+        n = 1
+        for item in list:
+            # strips all newlines before adding a single one -- effectively
+            # prevents the markdown that causes list items to be wrapped in
+            # paragraph tags
+            s += str(n) + ". " + str(item).strip("\n") + "\n"
+            n += 1
 
-  def ol(self, list):
-    s = ''
-    n = 1
-    for item in list:
-      # strips all newlines before adding a single one -- effectively
-      # prevents the markdown that causes list items to be wrapped in
-      # paragraph tags
-      s += str(n) + ". " + str(item).strip('\n') + "\n"
-      n += 1
+        return s
 
-    return s
+    def hr(self):
+        return "------------\n"
 
-  def hr(self):
-    return "------------\n"
+    def i(self, text):
+        # add emphasis to supplied text
+        return "*" + text + "*"
 
-  def i(self, text):
-    # add emphasis to supplied text
-    return "*" + text + "*"
+    def b(self, text):
+        # add double emphasis (i.e., bold)
+        return "**" + text + "**"
 
-  def b(self, text):
-    # add double emphasis (i.e., bold)
-    return "**" + text + "**"
-
-  def code(self, text):
-    # format as inline code
-    return "`" + text + "`"
+    def code(self, text):
+        # format as inline code
+        return "`" + text + "`"

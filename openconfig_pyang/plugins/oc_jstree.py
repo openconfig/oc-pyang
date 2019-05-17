@@ -43,27 +43,33 @@ import re
 from pyang import plugin
 from pyang import statements
 
+
 def pyang_plugin_init():
     plugin.register_plugin(JSTreePlugin())
+
 
 class JSTreePlugin(plugin.PyangPlugin):
     def add_output_format(self, fmts):
         self.multiple_modules = True
-        fmts['oc-jstree'] = self
+        fmts["oc-jstree"] = self
 
     def add_opts(self, optparser):
         optlist = [
-            optparse.make_option("--oc-jstree-no-path",
-                                 dest="jstree_no_path",
-                                 action="store_true",
-                                 help="""Do not include paths to make
-                                       page less wide"""),
-            optparse.make_option("--oc-jstree-strip",
-                              dest="strip_namespace",
-                              action="store_true",
-                              help="""Strip namespace prefixes from
-                                path components"""),
-            ]
+            optparse.make_option(
+                "--oc-jstree-no-path",
+                dest="jstree_no_path",
+                action="store_true",
+                help="""Do not include paths to make
+                                       page less wide""",
+            ),
+            optparse.make_option(
+                "--oc-jstree-strip",
+                dest="strip_namespace",
+                action="store_true",
+                help="""Strip namespace prefixes from
+                                path components""",
+            ),
+        ]
 
         g = optparser.add_option_group("OpenConfig JSTree output specific options")
         g.add_options(optlist)
@@ -75,12 +81,14 @@ class JSTreePlugin(plugin.PyangPlugin):
         emit_header(modules, fd, ctx)
         emit_css(fd, ctx)
         emit_js(fd, ctx)
-        emit_bodystart(modules,fd, ctx)
+        emit_bodystart(modules, fd, ctx)
         emit_tree(modules, fd, ctx)
         emit_footer(fd, ctx)
 
+
 def emit_css(fd, ctx):
-    fd.write("""
+    fd.write(
+        """
 <style type="text/css" media="all">
 
 body, h1, h2, h3, h4, h5, h6, p, td, table td, input, select {
@@ -107,23 +115,33 @@ ol#root  {padding-left: 5px; margin-top: 2px; margin-bottom: 1px;
 #root a {text-decoration: none;}
 
 .folder {
-   """+get_folder_css()+"""
+   """
+        + get_folder_css()
+        + """
 }
 
 .doc {
-   """+get_doc_css()+"""
+   """
+        + get_doc_css()
+        + """
 }
 
 .leaf {
-   """+get_leaf_css()+"""
+   """
+        + get_leaf_css()
+        + """
 }
 
 .leaf-list {
-   """+get_leaf_list_css()+"""
+   """
+        + get_leaf_list_css()
+        + """
 }
 
 .action {
-   """+get_action_css()+"""
+   """
+        + get_action_css()
+        + """
 }
 
 .tier1  {margin-left: 0;     }
@@ -133,14 +151,21 @@ ol#root  {padding-left: 5px; margin-top: 2px; margin-bottom: 1px;
 .level3 {padding-left: 2em;  }
 .level4 {padding-left: 3em;  }
 </style>
-""")
+"""
+    )
+
 
 def emit_js(fd, ctx):
-    fd.write("""
+    fd.write(
+        """
 <script language="javascript1.2">
 function toggleRows(elm) {
  var rows = document.getElementsByTagName("TR");
- elm.style.backgroundImage = """ + '"' + get_leaf_img() + '"' + """;
+ elm.style.backgroundImage = """
+        + '"'
+        + get_leaf_img()
+        + '"'
+        + """;
  var newDisplay = "none";
  var thisID = elm.parentNode.parentNode.parentNode.id + "-";
  // Are we expanding or contracting? If the first child is hidden, we expand
@@ -150,7 +175,11 @@ function toggleRows(elm) {
     if (r.style.display == "none") {
      if (document.all) newDisplay = "block"; //IE4+ specific code
      else newDisplay = "table-row"; //Netscape and Mozilla
-     elm.style.backgroundImage = """ + '"' + get_folder_open_img() + '"' + """;
+     elm.style.backgroundImage = """
+        + '"'
+        + get_folder_open_img()
+        + '"'
+        + """;
     }
     break;
    }
@@ -167,7 +196,11 @@ function toggleRows(elm) {
      var tier = cell.getElementsByTagName("DIV")[0];
      var folder = tier.getElementsByTagName("A")[0];
      if (folder.getAttribute("onclick") != null) {
-     folder.style.backgroundImage = """+'"'+get_folder_closed_img()+'"'+""";
+     folder.style.backgroundImage = """
+        + '"'
+        + get_folder_closed_img()
+        + '"'
+        + """;
      }
    }
  }
@@ -204,67 +237,79 @@ function expandAllRows() {
   }
 }
 </script>
-""")
+"""
+    )
+
 
 def emit_header(modules, fd, ctx):
-    title = "";
+    title = ""
     for m in modules:
         title = title + " " + m.arg
-    fd.write("<head><title>%s \n</title>" %title)
+    fd.write("<head><title>%s \n</title>" % title)
+
 
 def emit_footer(fd, ctx):
-    fd.write("""
+    fd.write(
+        """
 </table>
 </div>
 </body>
 </html>
 
-""")
+"""
+    )
 
-levelcnt = [0]*100
+
+levelcnt = [0] * 100
+
 
 def emit_bodystart(modules, fd, ctx):
-    fd.write("""
+    fd.write(
+        """
 <body onload="collapseAllRows();">
 <div>
   <a href="http://www.openconfig.net">
-   <img style="display: inline-block;vertical-align: middle;" src="""+get_openconfig_logo()+""" />
+   <img style="display: inline-block;vertical-align: middle;" src="""
+        + get_openconfig_logo()
+        + """ />
   </a>
 <span style="float: right;">generated by <a href="https://github.com/mbj4668/pyang">pyang</a></span>
 </div>
 <div class="app">
 <div style="border: dashed 1px #000;">
-""")
+"""
+    )
     for module in modules:
         bstr = ""
-        b = module.search_one('belongs-to')
+        b = module.search_one("belongs-to")
         if b is not None:
             bstr = " (belongs-to %s)" % b.arg
 
         nsstr = ""
-        ns = module.search_one('namespace')
+        ns = module.search_one("namespace")
         if ns is not None:
             nsstr = ns.arg
-        pr = module.search_one('prefix')
+        pr = module.search_one("prefix")
 
         prstr = ""
         if pr is not None:
             prstr = pr.arg
 
-        if module.keyword == 'module':
-           fd.write("""<h1> %s: <font color=blue>%s%s</font>, Namespace:
+        if module.keyword == "module":
+            fd.write(
+                """<h1> %s: <font color=blue>%s%s</font>, Namespace:
                     <font color=blue>%s</font>, Prefix:
                     <font color=blue>%s</font></h1> \n"""
-                    % (module.keyword.capitalize(),
-                       module.arg,
-                       bstr,
-                       nsstr,
-                       prstr))
+                % (module.keyword.capitalize(), module.arg, bstr, nsstr, prstr)
+            )
         else:
-           fd.write("<h1> %s: <font color=blue>%s%s</font></h1> \n"
-                    % (module.keyword.capitalize(), module.arg, bstr))
+            fd.write(
+                "<h1> %s: <font color=blue>%s%s</font></h1> \n"
+                % (module.keyword.capitalize(), module.arg, bstr)
+            )
 
-    fd.write("""
+    fd.write(
+        """
  <table width="100%">
 
  <tr>
@@ -280,28 +325,34 @@ def emit_bodystart(modules, fd, ctx):
   <th align=left>Flags</th>
   <th align=left>Opts</th>
   <th align=left>Status</th>
-""")
+"""
+    )
     if not ctx.opts.jstree_no_path:
-      fd.write("""
+        fd.write(
+            """
   <th align=left>Path</th>
 </tr>
-""")
+"""
+        )
     else:
-      fd.write("""
+        fd.write(
+            """
 </tr>
-""")
+"""
+        )
+
 
 def emit_tree(modules, fd, ctx):
     global levelcnt
     for module in modules:
         bstr = ""
-        b = module.search_one('belongs-to')
+        b = module.search_one("belongs-to")
         if b is not None:
             bstr = " (belongs-to %s)" % b.arg
-        ns = module.search_one('namespace')
+        ns = module.search_one("namespace")
         if ns is not None:
             nsstr = ns.arg
-        pr = module.search_one('prefix')
+        pr = module.search_one("prefix")
         if pr is not None:
             prstr = pr.arg
         else:
@@ -309,12 +360,14 @@ def emit_tree(modules, fd, ctx):
 
         temp_mod_arg = module.arg
         # html plugin specific changes
-        if hasattr(ctx, 'html_plugin_user'):
-           from pyang.plugins.html import force_link
-           temp_mod_arg = force_link(ctx,module,module)
+        if hasattr(ctx, "html_plugin_user"):
+            from pyang.plugins.html import force_link
+
+            temp_mod_arg = force_link(ctx, module, module)
 
         levelcnt[1] += 1
-        fd.write("""<tr id="%s" class="a">
+        fd.write(
+            """<tr id="%s" class="a">
                      <td id="p1">
                         <div id="p2" class="tier1">
                            <a href="#" id="p3"
@@ -323,19 +376,28 @@ def emit_tree(modules, fd, ctx):
                            </a>
                            <font color=blue>%s</font>
                         </div>
-                     </td> \n""" %(levelcnt[1], temp_mod_arg))
-        fd.write("""<td>%s</td><td></td><td></td><td></td><td>
-                    </td></tr>\n""" %module.keyword)
-        #fd.write("<td>module</td><td></td><td></td><td></td><td></td></tr>\n")
+                     </td> \n"""
+            % (levelcnt[1], temp_mod_arg)
+        )
+        fd.write(
+            """<td>%s</td><td></td><td></td><td></td><td>
+                    </td></tr>\n"""
+            % module.keyword
+        )
+        # fd.write("<td>module</td><td></td><td></td><td></td><td></td></tr>\n")
 
-        chs = [ch for ch in module.i_children
-               if ch.keyword in statements.data_definition_keywords]
-        print_children(chs, module, fd, ' ', ctx, 2)
+        chs = [
+            ch
+            for ch in module.i_children
+            if ch.keyword in statements.data_definition_keywords
+        ]
+        print_children(chs, module, fd, " ", ctx, 2)
 
-        rpcs = module.search('rpc')
+        rpcs = module.search("rpc")
         levelcnt[1] += 1
         if len(rpcs) > 0:
-            fd.write("""<tr id="%s" class="a">
+            fd.write(
+                """<tr id="%s" class="a">
                          <td nowrap id="p1000">
                             <div id="p2000" class="tier1">
                                <a href="#" id="p3000"
@@ -344,14 +406,17 @@ def emit_tree(modules, fd, ctx):
                                </a>
                                %s:rpcs
                             </div>
-                         </td> \n""" %(levelcnt[1],prstr))
+                         </td> \n"""
+                % (levelcnt[1], prstr)
+            )
             fd.write("<td></td><td></td><td></td><td></td><td></td></tr>\n")
-            print_children(rpcs, module, fd, ' ', ctx, 2)
+            print_children(rpcs, module, fd, " ", ctx, 2)
 
-        notifs = module.search('notification')
+        notifs = module.search("notification")
         levelcnt[1] += 1
         if len(notifs) > 0:
-            fd.write("""<tr id="%s" class="a">
+            fd.write(
+                """<tr id="%s" class="a">
                         <td nowrapid="p4000">
                            <div id="p5000" class="tier1">
                               <a href="#" id="p6000"
@@ -359,13 +424,17 @@ def emit_tree(modules, fd, ctx):
                                  class="folder">&nbsp;
                               </a>%s:notifs
                            </div>
-                        </td> \n""" %(levelcnt[1],prstr))
+                        </td> \n"""
+                % (levelcnt[1], prstr)
+            )
             fd.write("<td></td><td></td><td></td><td></td><td></td></tr>\n")
-            print_children(notifs, module, fd, ' ', ctx, 2)
+            print_children(notifs, module, fd, " ", ctx, 2)
+
 
 def print_children(i_children, module, fd, prefix, ctx, level=0):
     for ch in i_children:
         print_node(ch, module, fd, prefix, ctx, level)
+
 
 def print_node(s, module, fd, prefix, ctx, level=0):
 
@@ -373,98 +442,100 @@ def print_node(s, module, fd, prefix, ctx, level=0):
     fontstarttag = ""
     fontendtag = ""
     status = get_status_str(s)
-    nodetype = ''
-    options = ''
+    nodetype = ""
+    options = ""
     folder = False
     if s.i_module.i_modulename == module.i_modulename:
         name = s.arg
     else:
-        name = s.i_module.i_prefix + ':' + s.arg
+        name = s.i_module.i_prefix + ":" + s.arg
 
-    pr = module.search_one('prefix')
+    pr = module.search_one("prefix")
     if pr is not None:
         prstr = pr.arg
     else:
         prstr = ""
 
-    descr = s.search_one('description')
+    descr = s.search_one("description")
     descrstring = "No description"
     if descr is not None:
         descrstring = descr.arg
     flags = get_flags_str(s)
-    if s.keyword == 'list':
+    if s.keyword == "list":
         folder = True
-    elif s.keyword == 'container':
+    elif s.keyword == "container":
         folder = True
-        p = s.search_one('presence')
+        p = s.search_one("presence")
         if p is not None:
             pr_str = p.arg
-            options = "<abbr title=\"" + pr_str + "\">Presence</abbr>"
-    elif s.keyword  == 'choice':
+            options = '<abbr title="' + pr_str + '">Presence</abbr>'
+    elif s.keyword == "choice":
         folder = True
-        m = s.search_one('mandatory')
-        if m is None or m.arg == 'false':
-            name = '(' + s.arg + ')'
-            options = 'Choice'
+        m = s.search_one("mandatory")
+        if m is None or m.arg == "false":
+            name = "(" + s.arg + ")"
+            options = "Choice"
         else:
-            name = '(' + s.arg + ')'
-    elif s.keyword == 'case':
+            name = "(" + s.arg + ")"
+    elif s.keyword == "case":
         folder = True
         # fd.write(':(' + s.arg + ')')
-        name = ':(' + s.arg + ')'
-    elif s.keyword == 'input':
+        name = ":(" + s.arg + ")"
+    elif s.keyword == "input":
         folder = True
-    elif s.keyword == 'output':
+    elif s.keyword == "output":
         folder = True
-    elif s.keyword == 'rpc':
+    elif s.keyword == "rpc":
         folder = True
-    elif s.keyword == 'notification':
+    elif s.keyword == "notification":
         folder = True
     else:
-        if s.keyword == 'leaf-list':
-            options = '*'
-        elif s.keyword == 'leaf' and not hasattr(s, 'i_is_key'):
-            m = s.search_one('mandatory')
-            if m is None or m.arg == 'false':
-                options = '?'
+        if s.keyword == "leaf-list":
+            options = "*"
+        elif s.keyword == "leaf" and not hasattr(s, "i_is_key"):
+            m = s.search_one("mandatory")
+            if m is None or m.arg == "false":
+                options = "?"
         nodetype = get_typename(s)
 
-    if s.keyword == 'list' and s.search_one('key') is not None:
-        name += '[' + s.search_one('key').arg +  ']'
+    if s.keyword == "list" and s.search_one("key") is not None:
+        name += "[" + s.search_one("key").arg + "]"
 
-    descr = s.search_one('description')
+    descr = s.search_one("description")
     if descr is not None:
-        descrstring = ''.join([x for x in descr.arg if ord(x) < 128])
+        descrstring = "".join([x for x in descr.arg if ord(x) < 128])
     else:
-        descrstring = "No description";
+        descrstring = "No description"
     levelcnt[level] += 1
     idstring = str(levelcnt[1])
 
-    for i in range(2,level+1):
-        idstring += '-' + str(levelcnt[i])
+    for i in range(2, level + 1):
+        idstring += "-" + str(levelcnt[i])
 
     pathstr = statements.mk_path_str(s, True)
     if not ctx.opts.jstree_no_path:
         if ctx.opts.strip_namespace:
-          re_ns = re.compile(r'^.+:')
-          path_components = [re_ns.sub('', comp) for comp in pathstr.split('/')]
-          pathstr = '/'.join(path_components)
+            re_ns = re.compile(r"^.+:")
+            path_components = [re_ns.sub("", comp) for comp in pathstr.split("/")]
+            pathstr = "/".join(path_components)
     else:
-      # append the path to the description popup
-      descrstring = descrstring + "\n\npath: " + pathstr
-      pathstr = ""
+        # append the path to the description popup
+        descrstring = descrstring + "\n\npath: " + pathstr
+        pathstr = ""
 
-    if '?' in options:
+    if "?" in options:
         fontstarttag = "<em>"
         fontendtag = "</em>"
     keyword = s.keyword
 
     if folder:
         # html plugin specific changes
-        if hasattr(ctx, 'html_plugin_user'):
-           from pyang.plugins.html import force_link
-           name = force_link(ctx,s,module,name)
-        fd.write("""<tr id="%s" class="a">
+        if hasattr(ctx, "html_plugin_user"):
+            from pyang.plugins.html import force_link
+
+            name = force_link(ctx, s, module, name)
+        fd.write(
+            """<tr id="%s" class="a">
                        <td nowrap id="p4000">
                           <div id="p5000" style="margin-left:%sem;">
                              <a href="#" id="p6000"
@@ -473,26 +544,26 @@ def print_node(s, module, fd, prefix, ctx, level=0):
                              </a>
                              <abbr title="%s">%s</abbr>
                           </div>
-                       </td> \n""" %(idstring, (level * 1.5 - 1.5), descrstring, name))
-        fd.write("""<td nowrap>%s</td>
+                       </td> \n"""
+            % (idstring, (level * 1.5 - 1.5), descrstring, name)
+        )
+        fd.write(
+            """<td nowrap>%s</td>
                     <td nowrap>%s</td>
                     <td nowrap>%s</td>
                     <td>%s</td>
                     <td>%s</td>
                     <td nowrap>%s</td>
-                    </tr> \n""" %(s.keyword,
-                                  nodetype,
-                                  flags,
-                                  options,
-                                  status,
-                                  pathstr))
+                    </tr> \n"""
+            % (s.keyword, nodetype, flags, options, status, pathstr)
+        )
     else:
-        if s.keyword in ['action', ('tailf-common', 'action')]:
+        if s.keyword in ["action", ("tailf-common", "action")]:
             classstring = "action"
             typeinfo = action_params(s)
             typename = "parameters"
             keyword = "action"
-        elif s.keyword == 'rpc' or s.keyword == 'notification':
+        elif s.keyword == "rpc" or s.keyword == "notification":
             classstring = "folder"
             typeinfo = action_params(s)
             typename = "parameters"
@@ -500,7 +571,8 @@ def print_node(s, module, fd, prefix, ctx, level=0):
             classstring = s.keyword
             typeinfo = typestring(s)
             typename = nodetype
-        fd.write("""<tr id="%s" class="a">
+        fd.write(
+            """<tr id="%s" class="a">
                        <td nowrap>
                           <div id=9999 style="margin-left: %sem;">
                              <a class="%s">&nbsp;</a>
@@ -512,106 +584,113 @@ def print_node(s, module, fd, prefix, ctx, level=0):
                        <td nowrap>%s</td>
                        <td>%s</td>
                        <td>%s</td>
-                       <td nowrap>%s</td</tr> \n""" %(idstring,
-                                                      (level * 1.5 - 1.5),
-                                                      classstring,
-                                                      descrstring,
-                                                      fontstarttag,
-                                                      name,
-                                                      fontendtag,
-                                                      keyword,
-                                                      typeinfo,
-                                                      typename,
-                                                      flags,
-                                                      options,
-                                                      status,
-                                                      pathstr))
+                       <td nowrap>%s</td</tr> \n"""
+            % (
+                idstring,
+                (level * 1.5 - 1.5),
+                classstring,
+                descrstring,
+                fontstarttag,
+                name,
+                fontendtag,
+                keyword,
+                typeinfo,
+                typename,
+                flags,
+                options,
+                status,
+                pathstr,
+            )
+        )
 
-    if hasattr(s, 'i_children'):
+    if hasattr(s, "i_children"):
         level += 1
-        if s.keyword in ['choice', 'case']:
+        if s.keyword in ["choice", "case"]:
             print_children(s.i_children, module, fd, prefix, ctx, level)
         else:
             print_children(s.i_children, module, fd, prefix, ctx, level)
 
+
 def get_status_str(s):
-    status = s.search_one('status')
-    if status is None or status.arg == 'current':
-        return 'current'
+    status = s.search_one("status")
+    if status is None or status.arg == "current":
+        return "current"
     else:
         return status
 
+
 def get_flags_str(s):
-    if s.keyword == 'rpc':
-        return ''
-    elif s.keyword == 'notification':
-        return ''
+    if s.keyword == "rpc":
+        return ""
+    elif s.keyword == "notification":
+        return ""
     elif s.i_config == True:
-        return 'config'
+        return "config"
     else:
-        return 'no config'
+        return "no config"
+
 
 def get_typename(s):
-    t = s.search_one('type')
+    t = s.search_one("type")
     if t is not None:
         return t.arg
     else:
-        return ''
+        return ""
+
 
 def typestring(node):
-
     def get_nontypedefstring(node):
         s = ""
-        found  = False
-        t = node.search_one('type')
+        found = False
+        t = node.search_one("type")
         if t is not None:
-            s = t.arg + '\n'
-            if t.arg == 'enumeration':
+            s = t.arg + "\n"
+            if t.arg == "enumeration":
                 found = True
-                s = s + ' : {'
+                s = s + " : {"
                 for enums in t.substmts:
-                    s = s + enums.arg + ','
-                s = s + '}'
-            elif t.arg == 'leafref':
+                    s = s + enums.arg + ","
+                s = s + "}"
+            elif t.arg == "leafref":
                 found = True
-                s = s + ' : '
-                p = t.search_one('path')
+                s = s + " : "
+                p = t.search_one("path")
                 if p is not None:
                     s = s + p.arg
 
-            elif t.arg == 'identityref':
+            elif t.arg == "identityref":
                 found = True
-                b = t.search_one('base')
+                b = t.search_one("base")
                 if b is not None:
-                    s = s + ' {' + b.arg + '}'
+                    s = s + " {" + b.arg + "}"
 
-            elif t.arg == 'union':
+            elif t.arg == "union":
                 found = True
-                uniontypes = t.search('type')
-                s = s + '{' + uniontypes[0].arg
+                uniontypes = t.search("type")
+                s = s + "{" + uniontypes[0].arg
                 for uniontype in uniontypes[1:]:
-                    s = s + ', ' + uniontype.arg
-                s = s + '}'
+                    s = s + ", " + uniontype.arg
+                s = s + "}"
 
-            typerange = t.search_one('range')
+            typerange = t.search_one("range")
             if typerange is not None:
                 found = True
-                s = s + ' [' + typerange.arg + ']'
-            length = t.search_one('length')
+                s = s + " [" + typerange.arg + "]"
+            length = t.search_one("length")
             if length is not None:
                 found = True
-                s = s + ' {length = ' + length.arg + '}'
+                s = s + " {length = " + length.arg + "}"
 
-            pattern = t.search_one('pattern')
-            if pattern is not None: # truncate long patterns
+            pattern = t.search_one("pattern")
+            if pattern is not None:  # truncate long patterns
                 found = True
-                s = s + ' {pattern = ' + pattern.arg + '}'
+                s = s + " {pattern = " + pattern.arg + "}"
         return s
 
     s = get_nontypedefstring(node)
 
     if s != "":
-        t = node.search_one('type')
+        t = node.search_one("type")
         # chase typedef
         type_namespace = None
         i_type_name = None
@@ -619,7 +698,7 @@ def typestring(node):
         if name.find(":") == -1:
             prefix = None
         else:
-            [prefix, name] = name.split(':', 1)
+            [prefix, name] = name.split(":", 1)
         if prefix is None or t.i_module.i_prefix == prefix:
             # check local typedefs
             pmodule = node.i_module
@@ -627,7 +706,7 @@ def typestring(node):
         else:
             # this is a prefixed name, check the imported modules
             err = []
-            pmodule = statements.prefix_to_module(t.i_module,prefix,t.pos,err)
+            pmodule = statements.prefix_to_module(t.i_module, prefix, t.pos, err)
             if pmodule is None:
                 return
             typedef = statements.search_typedef(pmodule, name)
@@ -635,62 +714,70 @@ def typestring(node):
             s = s + get_nontypedefstring(typedef)
     return s
 
+
 def action_params(action):
     s = ""
     for params in action.substmts:
 
-     if params.keyword == 'input':
-         inputs = params.search('leaf')
-         inputs += params.search('leaf-list')
-         inputs += params.search('list')
-         inputs += params.search('container')
-         inputs += params.search('anyxml')
-         inputs += params.search('uses')
-         for i in inputs:
-            s += ' in: ' + i.arg + "\n"
+        if params.keyword == "input":
+            inputs = params.search("leaf")
+            inputs += params.search("leaf-list")
+            inputs += params.search("list")
+            inputs += params.search("container")
+            inputs += params.search("anyxml")
+            inputs += params.search("uses")
+            for i in inputs:
+                s += " in: " + i.arg + "\n"
 
-     if params.keyword == 'output':
-         outputs = params.search('leaf')
-         outputs += params.search('leaf-list')
-         outputs += params.search('list')
-         outputs += params.search('container')
-         outputs += params.search('anyxml')
-         outputs += params.search('uses')
-         for o in outputs:
-             s += ' out: ' + o.arg + "\n"
+        if params.keyword == "output":
+            outputs = params.search("leaf")
+            outputs += params.search("leaf-list")
+            outputs += params.search("list")
+            outputs += params.search("container")
+            outputs += params.search("anyxml")
+            outputs += params.search("uses")
+            for o in outputs:
+                s += " out: " + o.arg + "\n"
     return s
 
+
 def get_folder_css():
-   return """
+    return """
 background:url(data:image/gif;base64,R0lGODlhGgAOALMLAJmZmYuLi3p6ev///+zs7MzMzGZmZqqqqrS0tLq6uuHh4f///wAAAAAAAAAAAAAAACH5BAEAAAsALAAAAAAaAA4AAASJcMlJq714qgROKUtxAABBgJkUFMQwFEhyFoFAKini7idSHwGDQXAYYAADxQdBOjiBQqGgYKx4AomCYoYAHqLRVVUCKCBdSthhCgYDKIDuTpnoGgptgxged3FHBgpgU2MTASsmdCM1gkNFGDVaHx91QQQ3KZGSZocHBCEpEgIrCYdxn6EVAnoIGREAOw==)  no-repeat; float: left; padding-right: 30px;margin-left: 3px;
           """
 
+
 def get_doc_css():
-   return """
+    return """
 background:url(data:image/gif;base64,R0lGODlhDAAOALMJAMzMzODg4P///+np6a+vr+7u7jMzM5mZmYmJif///wAAAAAAAAAAAAAAAAAAAAAAACH5BAEAAAkALAAAAAAMAA4AAARFEEhyCAEjackPCESwBRxwCKD4BSSACCgxrKyJ3B42sK2FSINgsAa4AApI4W5yFCCTywts+txJp9TC4IrFcruwi2FMLgMiADs=)
 no-repeat; float: left; padding-right: 10px; margin-left: 3px;
 cursor: pointer;
           """
 
+
 def get_leaf_css():
-   return """
+    return """
 background:url(data:image/gif;base64,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)
 no-repeat; float: left; padding-right: 10px;margin-left: 3px;
           """
 
+
 def get_leaf_list_css():
-   return """
+    return """
 background:url(data:image/gif;base64,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)
 no-repeat; float: left; padding-right: 10px; margin-left: 3px;
           """
 
+
 def get_action_css():
-   return """
+    return """
 background:url(data:image/gif;base64,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)
 no-repeat; float: left; height: 14px; width: 12px; padding-right: 10px; margin-left: 3px;
           """
 
-def get_openconfig_logo(): return """ "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAJoAAAAjCAYAAABsOhOqAAAABGdBTUEAALGPC/xh
+
+def get_openconfig_logo():
+    return """ "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAJoAAAAjCAYAAABsOhOqAAAABGdBTUEAALGPC/xh
 BQAADpVJREFUeAHtnAtwVcUZgO+9eUDI+ICCOJgbCASSFoJAUEFRUJTHKMgU4pTW
 gNIaEaWxrdYqgw20imIV245YBYQAvnjUMqIQlIJFDT54GAyBJATzgNKCgATyICS3
 33+4e9lz7jk3Cc1YS+7ObHb3f+3+//777+NccLvOM63zeje7fL6hVna3271mVHn5
@@ -771,8 +858,14 @@ Li+/3wYTBrVSCwRtnbodOFutsjqZ4IlYPnKBTqvXEfqtvVTr/Ybr310LhHS0UMPm
 oCavwLaJB9+wo9lapvUCjSeI81EfZ3qDffcbO96oyMgv7OBhWOu1wH8A7ieQEBIL
 MOIAAAAASUVORK5CYII=" """
 
-def get_folder_open_img(): return """url(data:image/gif;base64,R0lGODlhGgAOALMLAJmZmYqKiv///+zs7MzMzGZmZrOzs7q6uqqqqnZ2duHh4f///wAAAAAAAAAAAAAAACH5BAEAAAsALAAAAAAaAA4AAASScMlJq714qgMMIQuBAMAwZBRADIJAGMfwBQE6GW0uGzRS2wuAQPHhABAIAyBAABSe0IJKgiAEDgSF7OVDBKNQwEQlbBG5CZAiAA4oxsoc8WBAFEALe9SQ6rS2dU5vCwJsTwECKUwmcyMBCYMhUHgTj1kfRTwFJxKFBYgVlpdNNCUVBHcWCUwHpQacFgJCqp98GBEAOw==)"""
 
-def get_folder_closed_img(): return """url(data:image/gif;base64,R0lGODlhGgAOALMLAJmZmYuLi3p6ev///+zs7MzMzGZmZqqqqrS0tLq6uuHh4f///wAAAAAAAAAAAAAAACH5BAEAAAsALAAAAAAaAA4AAASJcMlJq714qgROKUtxAABBgJkUFMQwFEhyFoFAKini7idSHwGDQXAYYAADxQdBOjiBQqGgYKx4AomCYoYAHqLRVVUCKCBdSthhCgYDKIDuTpnoGgptgxged3FHBgpgU2MTASsmdCM1gkNFGDVaHx91QQQ3KZGSZocHBCEpEgIrCYdxn6EVAnoIGREAOw==)"""
+def get_folder_open_img():
+    return """url(data:image/gif;base64,R0lGODlhGgAOALMLAJmZmYqKiv///+zs7MzMzGZmZrOzs7q6uqqqqnZ2duHh4f///wAAAAAAAAAAAAAAACH5BAEAAAsALAAAAAAaAA4AAASScMlJq714qgMMIQuBAMAwZBRADIJAGMfwBQE6GW0uGzRS2wuAQPHhABAIAyBAABSe0IJKgiAEDgSF7OVDBKNQwEQlbBG5CZAiAA4oxsoc8WBAFEALe9SQ6rS2dU5vCwJsTwECKUwmcyMBCYMhUHgTj1kfRTwFJxKFBYgVlpdNNCUVBHcWCUwHpQacFgJCqp98GBEAOw==)"""
 
-def get_leaf_img(): return """url(data:image/gif;base64,R0lGODlhGgAOALMLAJmZmYuLi3p6ev///+zs7MzMzGZmZqqqqrS0tLq6uuHh4f///wAAAAAAAAAAAAAAACH5BAEAAAsALAAAAAAaAA4AAASJcMlJq714qgROKUtxAABBgJkUFMQwFEhyFoFAKini7idSHwGDQXAYYAADxQdBOjiBQqGgYKx4AomCYoYAHqLRVVUCKCBdSthhCgYDKIDuTpnoGgptgxged3FHBgpgU2MTASsmdCM1gkNFGDVaHx91QQQ3KZGSZocHBCEpEgIrCYdxn6EVAnoIGREAOw==)"""
+
+def get_folder_closed_img():
+    return """url(data:image/gif;base64,R0lGODlhGgAOALMLAJmZmYuLi3p6ev///+zs7MzMzGZmZqqqqrS0tLq6uuHh4f///wAAAAAAAAAAAAAAACH5BAEAAAsALAAAAAAaAA4AAASJcMlJq714qgROKUtxAABBgJkUFMQwFEhyFoFAKini7idSHwGDQXAYYAADxQdBOjiBQqGgYKx4AomCYoYAHqLRVVUCKCBdSthhCgYDKIDuTpnoGgptgxged3FHBgpgU2MTASsmdCM1gkNFGDVaHx91QQQ3KZGSZocHBCEpEgIrCYdxn6EVAnoIGREAOw==)"""
+
+
+def get_leaf_img():
+    return """url(data:image/gif;base64,R0lGODlhGgAOALMLAJmZmYuLi3p6ev///+zs7MzMzGZmZqqqqrS0tLq6uuHh4f///wAAAAAAAAAAAAAAACH5BAEAAAsALAAAAAAaAA4AAASJcMlJq714qgROKUtxAABBgJkUFMQwFEhyFoFAKini7idSHwGDQXAYYAADxQdBOjiBQqGgYKx4AomCYoYAHqLRVVUCKCBdSthhCgYDKIDuTpnoGgptgxged3FHBgpgU2MTASsmdCM1gkNFGDVaHx91QQQ3KZGSZocHBCEpEgIrCYdxn6EVAnoIGREAOw==)"""

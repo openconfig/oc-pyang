@@ -21,7 +21,7 @@ import re
 
 
 def split_paths(path):
-  """Return a list of path elements.
+    """Return a list of path elements.
 
   Args:
     path: A YANG path string specified as /a/b
@@ -29,12 +29,12 @@ def split_paths(path):
   Returns:
     A list of path components
   """
-  components = path.split("/")
-  return [c for c in components if c]
+    components = path.split("/")
+    return [c for c in components if c]
 
 
 def strip_namespace(path):
-  """Removes namespace prefixes from elements of the supplied path.
+    """Removes namespace prefixes from elements of the supplied path.
 
   Args:
     path: A YANG path string
@@ -42,14 +42,14 @@ def strip_namespace(path):
   Returns:
     A YANG path string with the namespaces removed.
   """
-  re_ns = re.compile(r"^.+:")
-  path_components = [re_ns.sub("", comp) for comp in path.split("/")]
-  pathstr = "/".join(path_components)
-  return pathstr
+    re_ns = re.compile(r"^.+:")
+    path_components = [re_ns.sub("", comp) for comp in path.split("/")]
+    pathstr = "/".join(path_components)
+    return pathstr
 
 
 def remove_last(path):
-  """Removes the last path element and returns both parts.
+    """Removes the last path element and returns both parts.
 
   Note the last '/' is not returned in either part.
 
@@ -61,7 +61,7 @@ def remove_last(path):
       0: the path with the last element removed (string)
       1: the name of the last element (string)
   """
-  components = path.split("/")
-  last = components.pop()
-  prefix = "/".join(components)
-  return (prefix, last)
+    components = path.split("/")
+    last = components.pop()
+    prefix = "/".join(components)
+    return (prefix, last)

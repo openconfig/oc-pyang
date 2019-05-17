@@ -20,9 +20,18 @@ Support classes for yangdoc plugin
 
 
 class YangDocDefs:
-  """Class object to store language-related constants, keywords,
+    """Class object to store language-related constants, keywords,
   information, etc."""
 
-  integer_types = ['int8', 'int16', 'int32', 'int64', 'uint8', 'uint16', 'uint32', 'uint64']
+    integer_types = [
+        "int8",
+        "int16",
+        "int32",
+        "int64",
+        "uint8",
+        "uint16",
+        "uint32",
+        "uint64",
+    ]
 
-  type_leaf_properties = ['default', 'units']
+    type_leaf_properties = ["default", "units"]
