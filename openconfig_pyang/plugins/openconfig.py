@@ -19,7 +19,7 @@ This checker is derived from the standard pyang lint plugin which also checks
 modules according the YANG usage guidelines in RFC 6087.
 """
 
-from __future__ import print_function
+
 
 import re
 from enum import IntEnum
@@ -35,12 +35,12 @@ from pyang.plugins import lint
 from util import yangpath
 
 # Keywords which result in data nodes being created in a YANG tree
-INSTANTIATED_DATA_KEYWORDS = [u"leaf", u"leaf-list", u"container", u"list",
-                              u"choice"]
-LEAFNODE_KEYWORDS = [u"leaf", u"leaf-list"]
+INSTANTIATED_DATA_KEYWORDS = ["leaf", "leaf-list", "container", "list",
+                              "choice"]
+LEAFNODE_KEYWORDS = ["leaf", "leaf-list"]
 
 # YANG types that should not be used in OpenConfig models.
-BAD_TYPES = [u"empty", u"bits"]
+BAD_TYPES = ["empty", "bits"]
 
 
 class ErrorLevel(IntEnum):
@@ -431,8 +431,8 @@ class OCLintStages(object):
         stmt: pyang.Statement matching the validation call.
     """
     validmap = {
-        u"module": [OCLintFunctions.check_module_rawtext],
-        u"submodule": [OCLintFunctions.check_module_rawtext],
+        "module": [OCLintFunctions.check_module_rawtext],
+        "submodule": [OCLintFunctions.check_module_rawtext],
     }
 
     for fn in OCLintStages.map_statement_to_lint_fn(stmt, validmap):
@@ -451,28 +451,28 @@ class OCLintStages(object):
     """
 
     validmap = {
-        u"*": [
+        "*": [
             OCLintFunctions.check_yang_feature_usage,
         ],
-        u"LEAVES": [
+        "LEAVES": [
             OCLintFunctions.check_enumeration_style,
             OCLintFunctions.check_bad_types,
         ],
-        u"identity": [
+        "identity": [
             OCLintFunctions.check_identity_style,
         ],
-        u"module": [
+        "module": [
             OCLintFunctions.check_versioning,
             OCLintFunctions.check_top_level_data_definitions,
             OCLintFunctions.check_standard_groupings,
         ],
-        u"augment": [
+        "augment": [
             OCLintFunctions.check_relative_paths,
         ],
-        u"path": [
+        "path": [
             OCLintFunctions.check_relative_paths,
         ],
-        u"typedef": [
+        "typedef": [
             OCLintFunctions.check_typedef_style,
         ],
     }
@@ -492,14 +492,14 @@ class OCLintStages(object):
         stmt: pyang.Statement matching the validation call
     """
     validmap = {
-        u"LEAVES": [
+        "LEAVES": [
             OCLintFunctions.check_opstate,
         ],
-        u"list": [
+        "list": [
             OCLintFunctions.check_list_enclosing_container,
             OCLintFunctions.check_leaf_mirroring,
         ],
-        u"container": [
+        "container": [
             OCLintFunctions.check_leaf_mirroring,
         ],
     }
@@ -527,12 +527,12 @@ class OCLintStages(object):
             [ModuleType.OC, ModuleType.OCINFRA]):
       return []
 
-    if u"*" in validation_map:
-      functions.extend(validation_map[u"*"])
+    if "*" in validation_map:
+      functions.extend(validation_map["*"])
 
-    if u"LEAVES" in validation_map:
-      if unicode(stmt.keyword) in LEAFNODE_KEYWORDS:
-        functions.extend(validation_map[u"LEAVES"])
+    if "LEAVES" in validation_map:
+      if str(stmt.keyword) in LEAFNODE_KEYWORDS:
+        functions.extend(validation_map["LEAVES"])
 
     if stmt.keyword in validation_map:
       functions.extend(validation_map[stmt.keyword])
@@ -573,7 +573,7 @@ class OCLintFunctions(object):
         module = ctx.repository.get_module_from_handle(handle[2])
       except (AttributeError, IndexError) as e:
         err_add(ctx.errors, stmt.pos, "OC_LINTER_ERROR",
-                "Can't find module %s: %s" % (stmt.pos.ref, unicode(e)))
+                "Can't find module %s: %s" % (stmt.pos.ref, str(e)))
         return
     else:
       err_add(ctx.errors, stmt.pos, "OC_LINTER_ERROR",
@@ -621,9 +621,9 @@ class OCLintFunctions(object):
       # included by OpenConfig, and avoid parsing the extension
       # module itself.
       modname_parts = mod.split("-")
-      if unicode(modname_parts[0]) in [u"ietf", u"iana"]:
+      if str(modname_parts[0]) in ["ietf", "iana"]:
         return ModuleType.NONOC
-      elif unicode(modname_parts[1]) == "extensions":
+      elif str(modname_parts[1]) == "extensions":
         return ModuleType.OCINFRA
       return ModuleType.OC
     return ModuleType.NONOC
@@ -787,9 +787,9 @@ class OCLintFunctions(object):
       key_stmt = stmt.parent.search_one("key")
       if key_stmt is not None:
         if " " in key_stmt.arg:
-          key_parts = [unicode(i) for i in key_stmt.arg.split(" ")]
+          key_parts = [str(i) for i in key_stmt.arg.split(" ")]
         else:
-          key_parts = [unicode(key_stmt.arg)]
+          key_parts = [str(key_stmt.arg)]
 
         if stmt.arg in key_parts:
           is_key = True
@@ -826,7 +826,7 @@ class OCLintFunctions(object):
         if stmt.i_config is False:
           # Allow nested containers within a state container
           path_elements = yangpath.split_paths(pathstr)
-          if u"state" in path_elements:
+          if "state" in path_elements:
             valid_enclosing_state = True
 
         if valid_enclosing_state is False:

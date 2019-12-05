@@ -22,9 +22,9 @@ import re
 
 from xml.etree import ElementTree as ET
 from jinja2 import Environment, FileSystemLoader
-from doc_emitter import DocEmitter
-from yangdoc_defs import YangDocDefs
-import html_helper
+from util.doc_emitter import DocEmitter
+from util.yangdoc_defs import YangDocDefs
+import util.html_helper
 import yangpath
 
 class HTMLEmitter(DocEmitter):
