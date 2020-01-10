@@ -4,8 +4,6 @@ python:
             - "3.5"
             - "3.6"
             - "3.7"
-before_install:
-            - sudo apt-get install libxml2-dev libxslt-dev
 script:
             - "./tests/packaging.sh"
 branches:
