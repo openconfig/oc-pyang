@@ -127,7 +127,8 @@ class OpenConfigPlugin(lint.LintPlugin):
                              help="""Do not include standard lint (RFC 6087)
                              checking"""),
         ]
-    g = optparser.add_option_group("OpenConfig specific options")
+    group = OptionGroup(optparser, "OpenConfig specific options")
+    g = optparser.add_option_group(group)
     g.add_options(optlist)
 
   def setup_ctx(self, ctx):
