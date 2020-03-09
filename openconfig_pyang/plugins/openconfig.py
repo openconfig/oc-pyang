@@ -19,7 +19,7 @@ This checker is derived from the standard pyang lint plugin which also checks
 modules according the YANG usage guidelines in RFC 6087.
 """
 
-from __future__ import print_function
+from __future__ import print_function, unicode_literals
 
 import re
 from enum import IntEnum
@@ -127,7 +127,7 @@ class OpenConfigPlugin(lint.LintPlugin):
                              help="""Do not include standard lint (RFC 6087)
                              checking"""),
         ]
-    g = optparser.add_option_group("OpenConfig specific options")
+    g = optparser.add_option_group(optparse.OptionGroup(optparser, "OpenConfig specific options"))
     g.add_options(optlist)
 
   def setup_ctx(self, ctx):
@@ -531,7 +531,7 @@ class OCLintStages(object):
       functions.extend(validation_map[u"*"])
 
     if u"LEAVES" in validation_map:
-      if unicode(stmt.keyword) in LEAFNODE_KEYWORDS:
+      if stmt.keyword in LEAFNODE_KEYWORDS:
         functions.extend(validation_map[u"LEAVES"])
 
     if stmt.keyword in validation_map:
@@ -573,7 +573,7 @@ class OCLintFunctions(object):
         module = ctx.repository.get_module_from_handle(handle[2])
       except (AttributeError, IndexError) as e:
         err_add(ctx.errors, stmt.pos, "OC_LINTER_ERROR",
-                "Can't find module %s: %s" % (stmt.pos.ref, unicode(e)))
+                "Can't find module %s: %s" % (stmt.pos.ref, e))
         return
     else:
       err_add(ctx.errors, stmt.pos, "OC_LINTER_ERROR",
@@ -621,9 +621,9 @@ class OCLintFunctions(object):
       # included by OpenConfig, and avoid parsing the extension
       # module itself.
       modname_parts = mod.split("-")
-      if unicode(modname_parts[0]) in [u"ietf", u"iana"]:
+      if modname_parts[0] in [u"ietf", u"iana"]:
         return ModuleType.NONOC
-      elif unicode(modname_parts[1]) == "extensions":
+      elif modname_parts[1] == "extensions":
         return ModuleType.OCINFRA
       return ModuleType.OC
     return ModuleType.NONOC
@@ -787,9 +787,9 @@ class OCLintFunctions(object):
       key_stmt = stmt.parent.search_one("key")
       if key_stmt is not None:
         if " " in key_stmt.arg:
-          key_parts = [unicode(i) for i in key_stmt.arg.split(" ")]
+          key_parts = [i for i in key_stmt.arg.split(" ")]
         else:
-          key_parts = [unicode(key_stmt.arg)]
+          key_parts = [key_stmt.arg]
 
         if stmt.arg in key_parts:
           is_key = True
