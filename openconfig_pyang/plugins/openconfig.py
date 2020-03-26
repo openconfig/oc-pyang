@@ -711,7 +711,7 @@ class OCLintFunctions(object):
       if re.match(r"[a-z]", enum.arg):
         err_add(ctx.errors, stmt.pos, "OC_ENUM_CASE",
                 (enum.arg, enum.arg.upper()))
-      elif not re.match(r"^[A-Z0-9]?[A-Z0-9\_\.]+$", enum.arg):
+      elif not re.match(r"^[A-Z0-9][A-Z0-9\_\.]{0,}$", enum.arg):
         err_add(ctx.errors, stmt.pos, "OC_ENUM_UNDERSCORES",
                 (enum.arg, enum.arg.upper()))
 
