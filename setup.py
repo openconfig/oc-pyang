@@ -15,7 +15,7 @@ limitations under the License.
 setup_tools file definition for oc-pyang.
 """
 
-from os import path
+import os
 from setuptools import find_packages
 from setuptools import setup
 from codecs import open
@@ -28,10 +28,11 @@ except ImportError:
 
 import openconfig_pyang
 
-thisdir = path.abspath(path.dirname(__file__))
-pip_reqs = parse_requirements(path.join(thisdir, "requirements.txt"),
-                              session=False)
-inst_reqs = [str(ir.req) for ir in pip_reqs]
+# allow setup.py to be run from any path
+os.chdir(os.path.normpath(os.path.join(os.path.abspath(__file__), os.pardir)))
+
+with open("requirements.txt", "r") as fp:
+    reqs = [r for r in fp.read().splitlines() if (len(r) > 0 and not r.startswith("#"))]
 
 setup(
     name="openconfig_pyang",
@@ -54,12 +55,14 @@ setup(
         "Topic :: Software Development :: Code Generators",
         "License :: OSI Approved :: Apache Software License",
         "Programming Language :: Python :: 2.7",
-        "Programming Language :: Python :: 2 :: Only"
+        "Programming Language :: Python :: 3.5"
+        "Programming Language :: Python :: 3.6"
+        "Programming Language :: Python :: 3.7"
     ],
     include_package_data=True,
     keywords="yang pyang openconfig",
     packages=find_packages(),
     scripts=['bin/oclint'],
-    install_requires=inst_reqs,
+    install_requires=reqs,
     zip_safe=False,
 )

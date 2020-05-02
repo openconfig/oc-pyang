@@ -252,7 +252,10 @@ def collect_docs(module, ctx):
 
   # get the description text
   description = module.search_one('description')
-  mod.attrs['desc'] = description.arg
+  if description:
+    mod.attrs['desc'] = description.arg
+  else:
+    mod.attrs['desc'] = ""
 
   # get the prefix used by the module
   mod.attrs['prefix'] = module.i_prefix
@@ -269,10 +272,10 @@ def collect_docs(module, ctx):
   if version is not None:
     mod.attrs['version'] = version.arg
   # collect identities
-  for (name, identity) in module.i_identities.iteritems():
+  for (name, identity) in module.i_identities.items():
     collect_identity_doc(identity, modtop)
   # collect typedefs
-  for (name, typedef) in module.i_typedefs.iteritems():
+  for (name, typedef) in module.i_typedefs.items():
     collect_typedef_doc(typedef, modtop)
   # collect elements
   for child in module.i_children:
@@ -414,7 +417,8 @@ def collect_type_docs (typest, typedoc):
     for enum in enums:
       enumdesc = enum.search_one('description')
       # generally expect a description substatement, but it might be None
-      typedoc.attrs['enums'][enum.arg] = enumdesc.arg
+      if enumdesc is not None:
+        typedoc.attrs['enums'][enum.arg] = enumdesc.arg
   elif typest.arg == 'leafref':
     ref_path = typest.search_one('path')
     typedoc.attrs['leafref_path'] = yangpath.strip_namespace(ref_path.arg)

@@ -22,10 +22,10 @@ import re
 
 from xml.etree import ElementTree as ET
 from jinja2 import Environment, FileSystemLoader
-from doc_emitter import DocEmitter
-from yangdoc_defs import YangDocDefs
-import html_helper
-import yangpath
+from .doc_emitter import DocEmitter
+from .yangdoc_defs import YangDocDefs
+from  . import html_helper
+from . import yangpath
 
 class HTMLEmitter(DocEmitter):
 
@@ -41,7 +41,7 @@ class HTMLEmitter(DocEmitter):
     # module name
     mod_div += ht.h1(mod.module_name, {"class": "module-name", "id": ("mod-" + ht.gen_html_id(mod.module_name))},2,True)
 
-    if mod.module.attrs.has_key('version'):
+    if 'version' in mod.module.attrs:
       mod_div += ht.h4("openconfig-version: " + mod.module.attrs['version'], {"class": "module-header"},2,True)
 
     # module description header
@@ -70,13 +70,13 @@ class HTMLEmitter(DocEmitter):
       types_div = ht.open_tag("div", newline=True)
       types_div += ht.h3("Defined types", {"class": "module-types-header", "id": mod.module_name + "-defined-types"},2,True)
 
-      for (typename, td) in mod.typedefs.iteritems():
+      for (typename, td) in mod.typedefs.items():
         types_div += ht.h4(typename,{"class": "module-type-name","id": "type-" + ht.gen_html_id(typename)},2,True)
         types_div += ht.para(ht.add_tag("span","description:" + ht.br(newline=True), {"class": "module-type-text-label"}) + td.attrs['desc'],{"class": "module-type-text"},2,True)
         types_div += gen_type_info(td.typedoc, 2)
 
         for prop in YangDocDefs.type_leaf_properties:
-          if td.attrs.has_key(prop):
+          if prop in td.attrs:
             types_div += ht.para(ht.add_tag("span", prop,{"class": "module-type-text-label"}) + ": " + td.attrs[prop],{"class": "module-type-text"},2,True)
 
 
@@ -102,7 +102,7 @@ class HTMLEmitter(DocEmitter):
         # TODO(aashaikh): this needs to be updated to handle nested identities / multiple inheritance
         derived = { key:value for key,value in mod.identities.items() if value.attrs['base'] == base_id }
         # emit the identities derived from the current base
-        for (idname, id) in derived.iteritems():
+        for (idname, id) in derived.items():
           idents_div += ht.h4(idname,{"class": "module-type-name","id":"ident-" + ht.gen_html_id(idname)},2,True)
           idents_div += ht.para(ht.add_tag("span","description:",{"class": "module-type-text-label"}) + ht.br(newline=True) + id.attrs['desc'],{"class":"module-type-text"},2,True)
           idents_div += ht.para(ht.add_tag("span", "base identity: ",{"class": "module-type-text-label"})
@@ -149,7 +149,7 @@ class HTMLEmitter(DocEmitter):
     s_div += ht.h4(statement_name, {"class": "statement-name","id":statement.attrs['id']},level,True)
 
     # node description
-    if statement.attrs.has_key('desc'):
+    if 'desc' in statement.attrs:
       s_div += ht.para(ht.add_tag("span", "description",{"class": "statement-info-label"}) + ":<br />" + statement.attrs['desc'],{"class": "statement-info-text"},level,True)
     s_div += ht.close_tag(newline=True)
 
@@ -176,7 +176,7 @@ class HTMLEmitter(DocEmitter):
       s_div += gen_type_info(statement.typedoc, level)
 
     for prop in YangDocDefs.type_leaf_properties:
-      if statement.attrs.has_key(prop):
+      if prop in statement.attrs:
         s_div += ht.para(ht.add_tag("span", prop, {"class": "statement-info-label"}) + ": " + statement.attrs[prop],{"class": "statement-info-text"},level,True)
 
     # add this statement to the collection of data
@@ -214,7 +214,7 @@ class HTMLEmitter(DocEmitter):
     if ctx.opts.doc_title is None:
       # just use the name of the first module returned by the dict if no title
       # is supplied
-      doc_title = self.moduledocs.iterkeys().next()
+      doc_title = list(self.moduledocs.keys())[0]
     else:
       doc_title = ctx.opts.doc_title
 
@@ -235,17 +235,17 @@ def gen_type_info(typedoc, level=1):
 
   if typename == 'enumeration':
     s += " "*level + "<ul>\n"
-    for (enum, desc) in typedoc.attrs['enums'].iteritems():
+    for (enum, desc) in typedoc.attrs['enums'].items():
       s += " "*level + "<li>" + enum + "<br />" + desc + "</li>\n"
     s += " "*level + "</ul>\n"
   elif typename == 'string':
-    if typedoc.attrs['restrictions'].has_key('pattern'):
+    if 'pattern' in typedoc.attrs['restrictions']:
       s += " "*level + "<ul>\n"
       s += " "*level + "<li>pattern:<br>\n"
       s += " "*level + typedoc.attrs['restrictions']['pattern'] + "\n</li>\n"
       s += " "*level + "</ul>\n"
   elif typename in YangDocDefs.integer_types:
-    if typedoc.attrs['restrictions'].has_key('range'):
+    if 'range' in typedoc.attrs['restrictions']:
       s += " "*level + "<ul>\n"
       s += " "*level + "<li>range:\n"
       s += " "*level + typedoc.attrs['restrictions']['range'] + "\n</li>\n"

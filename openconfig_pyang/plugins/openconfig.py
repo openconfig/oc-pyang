@@ -19,8 +19,9 @@ This checker is derived from the standard pyang lint plugin which also checks
 modules according the YANG usage guidelines in RFC 6087.
 """
 
-from __future__ import print_function
+from __future__ import print_function, unicode_literals
 
+import re
 from enum import IntEnum
 import optparse
 import os.path
@@ -29,7 +30,7 @@ from pyang import plugin
 from pyang import statements
 from pyang.error import err_add
 from pyang.plugins import lint
-import re
+
 
 from util import yangpath
 
@@ -37,6 +38,9 @@ from util import yangpath
 INSTANTIATED_DATA_KEYWORDS = [u"leaf", u"leaf-list", u"container", u"list",
                               u"choice"]
 LEAFNODE_KEYWORDS = [u"leaf", u"leaf-list"]
+
+# YANG types that should not be used in OpenConfig models.
+BAD_TYPES = [u"empty", u"bits"]
 
 
 class ErrorLevel(IntEnum):
@@ -69,6 +73,10 @@ class ModuleType(IntEnum):
 
 
 class ExternalValidationRules(object):
+  """Definitions of the validation rules that should be applied
+  from external sources - e.g., RFC6087.
+  """
+
   required_substatements = {
       "module": (("contact", "organization", "description", "revision"),
                  "RFC 6087: 4.7"),
@@ -92,8 +100,10 @@ class ExternalValidationRules(object):
   }
 
 
-# Register the OpenConfig plugin with pyang
 def pyang_plugin_init():
+  """
+  Register the OpenConfig plugin with pyang.
+  """
   plugin.register_plugin(OpenConfigPlugin())
 
 
@@ -117,7 +127,7 @@ class OpenConfigPlugin(lint.LintPlugin):
                              help="""Do not include standard lint (RFC 6087)
                              checking"""),
         ]
-    g = optparser.add_option_group("OpenConfig specific options")
+    g = optparser.add_option_group(optparse.OptionGroup(optparser, "OpenConfig specific options"))
     g.add_options(optlist)
 
   def setup_ctx(self, ctx):
@@ -151,7 +161,7 @@ class OpenConfigPlugin(lint.LintPlugin):
           OCLintStages.openconfig_override_base_linter)
       statements.add_validation_fun(
           "grammar", ["$chk_recommended"],
-           OCLintStages.openconfig_override_base_linter)
+          OCLintStages.openconfig_override_base_linter)
 
       statements.add_validation_fun(
           "grammar", ["namespace"],
@@ -373,6 +383,12 @@ class OpenConfigPlugin(lint.LintPlugin):
         "OC_KEY_ARGUMENT_UNQUOTED", ErrorLevel.MINOR,
         "All key arguments of a list should be quoted (%s is not)")
 
+    # bad type was used for a leaf or typedef
+    error.add_error_code(
+        "OC_BAD_TYPE", ErrorLevel.MAJOR,
+        "Bad type %s used in leaf or typedef",
+    )
+
 
 class OCLintStages(object):
   """Containing class for OpenConfig linter stages.
@@ -440,6 +456,7 @@ class OCLintStages(object):
         ],
         u"LEAVES": [
             OCLintFunctions.check_enumeration_style,
+            OCLintFunctions.check_bad_types,
         ],
         u"identity": [
             OCLintFunctions.check_identity_style,
@@ -454,7 +471,10 @@ class OCLintStages(object):
         ],
         u"path": [
             OCLintFunctions.check_relative_paths,
-        ]
+        ],
+        u"typedef": [
+            OCLintFunctions.check_typedef_style,
+        ],
     }
 
     for fn in OCLintStages.map_statement_to_lint_fn(stmt, validmap):
@@ -504,14 +524,14 @@ class OCLintStages(object):
     functions = []
     defining_module = stmt.pos.ref.split("/")[-1].split(".")[0]
     if (OCLintFunctions.is_openconfig_validatable_module(defining_module) not in
-        [ModuleType.OC, ModuleType.OCINFRA]):
+            [ModuleType.OC, ModuleType.OCINFRA]):
       return []
 
     if u"*" in validation_map:
       functions.extend(validation_map[u"*"])
 
     if u"LEAVES" in validation_map:
-      if unicode(stmt.keyword) in LEAFNODE_KEYWORDS:
+      if stmt.keyword in LEAFNODE_KEYWORDS:
         functions.extend(validation_map[u"LEAVES"])
 
     if stmt.keyword in validation_map:
@@ -553,14 +573,13 @@ class OCLintFunctions(object):
         module = ctx.repository.get_module_from_handle(handle[2])
       except (AttributeError, IndexError) as e:
         err_add(ctx.errors, stmt.pos, "OC_LINTER_ERROR",
-                "Can't find module %s: %s" % stmt.pos.ref, unicode(e))
+                "Can't find module %s: %s" % (stmt.pos.ref, e))
         return
     else:
       err_add(ctx.errors, stmt.pos, "OC_LINTER_ERROR",
               "Couldn't open module %s" % stmt.pos.ref)
       return
 
-    #key_re = re.compile(r"^([ ]+)?key([ ]+)(?P<arg>[^\"]);$")
     key_re = re.compile(r"^([ ]+)?key([ ]+)(?P<arg>[^\"][a-zA-Z0-9\-_]+);$")
     quoted_re = re.compile(r"^\".*\"$")
 
@@ -602,9 +621,9 @@ class OCLintFunctions(object):
       # included by OpenConfig, and avoid parsing the extension
       # module itself.
       modname_parts = mod.split("-")
-      if unicode(modname_parts[0]) in [u"ietf", u"iana"]:
+      if modname_parts[0] in [u"ietf", u"iana"]:
         return ModuleType.NONOC
-      elif unicode(modname_parts[1]) == "extensions":
+      elif modname_parts[1] == "extensions":
         return ModuleType.OCINFRA
       return ModuleType.OC
     return ModuleType.NONOC
@@ -627,7 +646,7 @@ class OCLintFunctions(object):
     # Don't perform this check for modules that are not OpenConfig
     # or are OpenConfig infrastructure (e.g., extensions)
     if (OCLintFunctions.is_openconfig_validatable_module(stmt.arg) in
-        [ModuleType.NONOC, ModuleType.OCINFRA]):
+            [ModuleType.NONOC, ModuleType.OCINFRA]):
       return
 
     version = None
@@ -638,7 +657,7 @@ class OCLintFunctions(object):
       # that openconfig-version is unique across all extension
       # modules.
       if (isinstance(substmt.keyword, tuple) and
-          substmt.keyword[1] == "openconfig-version"):
+              substmt.keyword[1] == "openconfig-version"):
         version = substmt
 
     if version is None:
@@ -692,9 +711,44 @@ class OCLintFunctions(object):
       if re.match(r"[a-z]", enum.arg):
         err_add(ctx.errors, stmt.pos, "OC_ENUM_CASE",
                 (enum.arg, enum.arg.upper()))
-      elif not re.match(r"^[A-Z0-9][A-Z0-9\_\.]+$", enum.arg):
+      elif not re.match(r"^[A-Z0-9][A-Z0-9\_\.]{0,}$", enum.arg):
         err_add(ctx.errors, stmt.pos, "OC_ENUM_UNDERSCORES",
                 (enum.arg, enum.arg.upper()))
+
+  @staticmethod
+  def check_bad_types(ctx, stmt):
+    """Check validation rules for bad types that should not
+    be used in OpenConfig models.
+
+    Args:
+      ctx: pyang.Context for validation
+      stmt: pyang.Statement representing a leaf or leaf-list
+    """
+    elemtype = stmt.search_one("type")
+    if elemtype is None or elemtype.arg not in BAD_TYPES:
+      return
+
+    err_add(ctx.errors, stmt.pos, "OC_BAD_TYPE",
+            (elemtype.arg))
+
+  @staticmethod
+  def check_typedef_style(ctx, stmt):
+    """Check validation rules for OpenConfig typedef
+    statements.
+
+    Args:
+      ctx: pyang.Context for validation
+      stmt: pyang.Statement representing a typedef.
+    """
+
+    elemtype = stmt.search_one("type")
+    if elemtype is None:
+      return
+
+    # errors are appended to the context, such that we can just call the
+    # base checks here.
+    OCLintFunctions.check_enumeration_style(ctx, stmt)
+    OCLintFunctions.check_bad_types(ctx, stmt)
 
   @staticmethod
   def check_identity_style(ctx, stmt):
@@ -733,9 +787,9 @@ class OCLintFunctions(object):
       key_stmt = stmt.parent.search_one("key")
       if key_stmt is not None:
         if " " in key_stmt.arg:
-          key_parts = [unicode(i) for i in key_stmt.arg.split(" ")]
+          key_parts = [i for i in key_stmt.arg.split(" ")]
         else:
-          key_parts = [unicode(key_stmt.arg)]
+          key_parts = [key_stmt.arg]
 
         if stmt.arg in key_parts:
           is_key = True
@@ -802,8 +856,8 @@ class OCLintFunctions(object):
         if len(ch.i_children) == 1 and ch.i_children[0].arg == stmt.arg \
             and ch.i_children[0].keyword == "list":
           err_add(ctx.errors, stmt.parent.pos,
-              "OC_LIST_DUPLICATE_COMPRESSED_NAME",
-              (stmt.arg, stmt.parent.arg))
+                  "OC_LIST_DUPLICATE_COMPRESSED_NAME",
+                  (stmt.arg, stmt.parent.arg))
 
     if parent_substmts != [stmt.arg]:
       remaining_parent_substmts = [i.arg for i in stmt.parent.i_children
@@ -914,7 +968,7 @@ class OCLintFunctions(object):
 
       if not is_typedef:
         err_add(ctx.errors, stmt.pos, "OC_RELATIVE_PATH",
-              (stmt.keyword, stmt.arg))
+                (stmt.keyword, stmt.arg))
 
   @staticmethod
   def check_standard_groupings(ctx, stmt):
@@ -928,14 +982,14 @@ class OCLintFunctions(object):
     # Don't perform this check for modules that are not OpenConfig
     # or are OpenConfig infrastructure (e.g., extensions)
     if (OCLintFunctions.is_openconfig_validatable_module(stmt.arg) in
-        [ModuleType.NONOC, ModuleType.OCINFRA]):
+            [ModuleType.NONOC, ModuleType.OCINFRA]):
       return
 
-    top_groupings = []
+    found = False
     for grouping in stmt.search("grouping"):
       if re.match(r".*\-top$", grouping.arg):
-        top_groupings.append(grouping.arg)
+        found = True
 
-    if not top_groupings:
+    if not found:
       err_add(ctx.errors, stmt.pos, "OC_MISSING_STANDARD_GROUPING",
               (stmt.arg, "-top"))
