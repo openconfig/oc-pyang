@@ -1,0 +1,24 @@
+#!/bin/bash
+
+# Copyright Google Inc, 2018
+#
+# This script runs the OpenConfig linter against the specified YANG files,
+# without needing pyang arguments.
+#
+# Author: robjs@google.com
+
+/usr/bin/env python -c 'import openconfig_pyang'
+if [ $? -ne 0 ]; then
+  echo "ERROR: cannot run without openconfig_pyang installed in this Python"
+  echo "       environment."
+  exit 127
+fi
+
+OCDIR=`/usr/bin/env python -c \
+        'import openconfig_pyang; import os; print ("{}/plugins".format(os.path.dirname(openconfig_pyang.__file__)))'`
+
+pyang --openconfig --lint --plugindir $OCDIR $@
+
+if [ $? -eq 0 ]; then
+  echo "SUCCESS: no OpenConfig linter warnings"
+fi
