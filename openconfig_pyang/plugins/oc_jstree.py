@@ -42,6 +42,7 @@ import re
 
 from pyang import plugin
 from pyang import statements
+from pyang import util
 
 def pyang_plugin_init():
     plugin.register_plugin(JSTreePlugin())
@@ -627,7 +628,7 @@ def typestring(node):
         else:
             # this is a prefixed name, check the imported modules
             err = []
-            pmodule = statements.prefix_to_module(t.i_module,prefix,t.pos,err)
+            pmodule = util.prefix_to_module(t.i_module,prefix,t.pos,err)
             if pmodule is None:
                 return
             typedef = statements.search_typedef(pmodule, name)
