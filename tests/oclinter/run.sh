@@ -24,8 +24,8 @@ for i in `find $TESTDIR -mindepth 1 -maxdepth 1 -type d`; do
   if [ -e $i/Makefile ]; then
     failed=0
 
-    okres=$(cd $i; make ok; echo $?)
-    borkres=$(cd $i; make broken; echo $?)
+    okres=$(cd $i && make ok >/dev/null 2>&1; echo $?)
+    borkres=$(cd $i && make broken >/dev/null 2>&1; echo $?)
 
     if [ $okres -ne 0 ]; then
       failed=1

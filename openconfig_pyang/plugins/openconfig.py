@@ -280,6 +280,12 @@ class OpenConfigPlugin(lint.LintPlugin):
         "list key \"%s\" should be type leafref with a reference to"
         " the corresponding leaf in config or state container")
 
+    # list keys should be leafrefs to direct children of config / state
+    error.add_error_code(
+        "OC_OPSTATE_KEY_LEAFREF_DIRECT", ErrorLevel.MAJOR,
+        "list key \"%s\" should be type leafref with a path to a"
+        " a direct child of the config or state container")
+
     # leaves in in config / state should have the correct config property
     error.add_error_code(
         "OC_OPSTATE_CONFIG_PROPERTY", ErrorLevel.MAJOR,
@@ -799,6 +805,15 @@ class OCLintFunctions(object):
       if keytype.arg != "leafref":
         err_add(ctx.errors, stmt.pos, "OC_OPSTATE_KEY_LEAFREF",
                 stmt.arg)
+
+      keypath = keytype.search_one("path")
+      keypathelem = yangpath.split_paths(keypath.arg)
+      for i in range(0,len(keypathelem)):
+        if keypathelem[i] in ["config", "state"]:
+          if len(keypathelem[i+1:]) > 1:
+            err_add(ctx.errors, stmt.pos, "OC_OPSTATE_KEY_LEAFREF_DIRECT",
+                    stmt.arg)
+
       return
 
     path_elements = yangpath.split_paths(pathstr)
