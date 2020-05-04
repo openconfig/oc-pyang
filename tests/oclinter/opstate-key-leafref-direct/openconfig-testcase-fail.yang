@@ -1,0 +1,44 @@
+module openconfig-testcase-fail {
+  prefix "oc-tc";
+  namespace "http://openconfig.net/linter/testcase";
+
+  import openconfig-extensions { prefix oc-ext; }
+
+  description
+    "Fail test case to check that a list key is specified
+    as a leafref";
+
+  oc-ext:openconfig-version "0.0.1";
+
+  revision 2016-09-28 {
+    reference "0.0.1";
+    description
+      "Revision statement";
+  }
+
+  grouping foo-top {
+    container test {
+      list test-list {
+        key "key";
+        config false;
+
+        leaf key {
+          type leafref { path "../state/counters/key"; }
+        }
+
+        container config {
+        }
+
+        container state {
+          config false;
+          container counters {
+            leaf key { type string; }
+          }
+        }
+      }
+    }
+  }
+
+  uses foo-top;
+
+}
