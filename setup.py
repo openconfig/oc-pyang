@@ -20,6 +20,12 @@ from setuptools import find_packages
 from setuptools import setup
 from codecs import open
 
+# support both older pip (<=9.0.3), and modern >=10
+try:
+    from pip._internal.req import parse_requirements
+except ImportError:
+    from pip.req import parse_requirements
+
 import openconfig_pyang
 
 # allow setup.py to be run from any path
@@ -56,6 +62,7 @@ setup(
     include_package_data=True,
     keywords="yang pyang openconfig",
     packages=find_packages(),
+    scripts=['bin/oclint'],
     install_requires=reqs,
     zip_safe=False,
 )
