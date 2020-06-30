@@ -395,6 +395,13 @@ class OpenConfigPlugin(lint.LintPlugin):
         "Bad type %s used in leaf or typedef",
     )
 
+    # unequal number of posix-pattern and pattern statements.
+    error.add_error_code(
+        "OC_POSIX_PATTERN_COUNT_UNEQUAL", ErrorLevel.MAJOR,
+        "string type has an unequal number of posix-pattern statements (%d) to"
+        "pattern statements (%d)",
+    )
+
 
 class OCLintStages(object):
   """Containing class for OpenConfig linter stages.
@@ -463,6 +470,7 @@ class OCLintStages(object):
         u"LEAVES": [
             OCLintFunctions.check_enumeration_style,
             OCLintFunctions.check_bad_types,
+            OCLintFunctions.check_posix_pattern_equal,
         ],
         u"identity": [
             OCLintFunctions.check_identity_style,
@@ -722,6 +730,29 @@ class OCLintFunctions(object):
                 (enum.arg, enum.arg.upper()))
 
   @staticmethod
+  def check_posix_pattern_equal(ctx, stmt):
+    """Check that OpenConfig's posix-pattern extension always equal in number to
+    pattern statements.
+
+    Args:
+      ctx: pyang.Context for validation
+      stmt: pyang.Statement representing a leaf or leaf-list
+          containing an enumeration
+    """
+    elemtype = stmt.search_one("type")
+    if elemtype is None:
+      return
+
+    patternCount = len(elemtype.search("pattern"))
+    posixPatternCount = 0
+    for ss in elemtype.substmts:
+      if hasattr(ss, "i_extension_modulename") and len(ss.keyword) >= 2:
+        if ss.keyword[0] == "openconfig-extensions" and ss.keyword[1] == "posix-pattern":
+          posixPatternCount += 1
+    if posixPatternCount != patternCount:
+      err_add(ctx.errors, stmt.pos, "OC_POSIX_PATTERN_COUNT_UNEQUAL", (posixPatternCount, patternCount))
+
+  @staticmethod
   def check_bad_types(ctx, stmt):
     """Check validation rules for bad types that should not
     be used in OpenConfig models.
@@ -755,6 +786,7 @@ class OCLintFunctions(object):
     # base checks here.
     OCLintFunctions.check_enumeration_style(ctx, stmt)
     OCLintFunctions.check_bad_types(ctx, stmt)
+    OCLintFunctions.check_posix_pattern_equal(ctx, stmt)
 
   @staticmethod
   def check_identity_style(ctx, stmt):
