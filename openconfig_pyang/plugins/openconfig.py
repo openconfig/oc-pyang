@@ -398,8 +398,8 @@ class OpenConfigPlugin(lint.LintPlugin):
     # unequal number of posix-pattern and pattern statements.
     error.add_error_code(
         "OC_POSIX_PATTERN_COUNT_UNEQUAL", ErrorLevel.MAJOR,
-        "string type has an unequal number of posix-pattern statements (%d) to"
-        "pattern statements (%d)",
+        "unequal number of posix-pattern statements (%d) to pattern "
+        "statements (%d)",
     )
 
 
