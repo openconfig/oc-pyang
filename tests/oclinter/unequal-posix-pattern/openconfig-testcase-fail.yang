@@ -6,7 +6,7 @@ module openconfig-testcase-fail {
 
   description
     "Failure test case for using a bad type within
-    an OpenConfig mdoel.";
+    an OpenConfig model.";
 
   oc-ext:openconfig-version "0.0.1";
 
