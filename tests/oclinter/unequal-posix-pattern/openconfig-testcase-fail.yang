@@ -1,0 +1,41 @@
+module openconfig-testcase-fail {
+  prefix "oc-tc";
+  namespace "http://openconfig.net/linter/testcase";
+
+  import openconfig-extensions { prefix oc-ext; }
+
+  description
+    "Failure test case for using a bad type within
+    an OpenConfig model.";
+
+  oc-ext:openconfig-version "0.0.1";
+
+  revision 2016-09-28 {
+    reference "0.0.1";
+    description
+      "Revision statement";
+  }
+
+  grouping testcase-config {
+    leaf bad {
+      type string {
+        pattern "1";
+        pattern "2";
+        oc-ext:posix-pattern "^\w$";
+      }
+    }
+  }
+
+  grouping testcase-top {
+    container config {
+      uses testcase-config;
+    }
+
+    container state {
+      config false;
+      uses testcase-config;
+    }
+  }
+
+  uses testcase-top;
+}
