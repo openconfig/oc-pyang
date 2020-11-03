@@ -568,7 +568,7 @@ class OCLintFunctions(object):
         iterations through the module.
     """
     try:
-      mod_filename = os.path.realpath(stmt.pos.ref).split("/")[-1]
+      mod_filename = stmt.pos.ref.split("/")[-1]
       mod_filename = mod_filename.split(".")[0]
     except IndexError:
       err_add(ctx.errors, stmt.pos, "OC_LINTER_ERROR",
