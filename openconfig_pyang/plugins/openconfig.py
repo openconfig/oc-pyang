@@ -272,7 +272,7 @@ class OpenConfigPlugin(lint.LintPlugin):
     error.add_error_code(
         "OC_OPSTATE_CONTAINER_NAME", ErrorLevel.MAJOR,
         "element \"%s\" at path \"%s\" should be in a \"config\""
-        "or \"state\" container")
+        " or \"state\" container")
 
     # list keys should be leafrefs to respective value in config / state
     error.add_error_code(
