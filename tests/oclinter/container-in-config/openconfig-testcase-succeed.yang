@@ -1,0 +1,40 @@
+module openconfig-testcase-succeed {
+  prefix "oc-tc";
+  namespace "http://openconfig.net/linter/testcase";
+
+  import openconfig-extensions { prefix oc-ext; }
+
+  description
+    "Failure for the case of having a container in config.";
+
+  oc-ext:openconfig-version "0.0.1";
+
+  revision 2016-09-28 {
+    reference "0.0.1";
+    description
+      "Revision statement";
+  }
+
+  grouping top-config {
+    leaf b { type string; }
+  }
+
+  grouping top-state {
+    leaf c { type string; }
+  }
+
+  grouping foo-top {
+     container config {
+        uses top-config;
+     }
+     container state {
+       config false;
+       uses top-config;
+       uses top-state;
+     }
+  }
+
+  uses foo-top;
+
+
+}
