@@ -1,6 +1,6 @@
 Jinja2==2.11.2
 lxml==4.5.0
 MarkupSafe==1.1.1
-pyang==2.2.1
+pyang==2.3.2
 cython
 enum34

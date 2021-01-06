@@ -20,19 +20,23 @@ export PLUGIN_DIR=$(/usr/bin/env python -c \
       'import openconfig_pyang; import os; \
        print("{}/plugins".format(os.path.dirname(openconfig_pyang.__file__)))')
 
-for i in `find $TESTDIR -mindepth 1 -maxdepth 1 -type d`; do
+for i in $(find $TESTDIR -mindepth 1 -maxdepth 1 -type d); do
   if [ -e $i/Makefile ]; then
     failed=0
 
-    okres=$(cd $i && make ok >/dev/null 2>&1; echo $?)
-    borkres=$(cd $i && make broken >/dev/null 2>&1; echo $?)
+    oklog=$(cd $i && make ok 2>&1)
+    okres=$(echo $?)
+    brokenlog=$(cd $i && make broken 2>&1)
+    brokenres=$(echo $?)
 
     if [ $okres -ne 0 ]; then
       failed=1
+      echo "$oklog"
     fi
 
-    if [ $borkres -eq 0 ]; then
+    if [ $brokenres -eq 0 ]; then
       failed=1
+      echo "$brokenlog"
     fi
 
     if [ $failed -ne 0 ]; then

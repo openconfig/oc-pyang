@@ -9,4 +9,4 @@ broken:
 	pyang --plugindir $(PLUGIN_DIR) \
 	    --openconfig -p ${ROOT_DIR}/../common \
 			    ${ROOT_DIR}/openconfig-testcase-fail.yang \
-						--print-error 2>&1 
+						--print-error-code 2>&1 
