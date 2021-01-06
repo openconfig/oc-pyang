@@ -32,7 +32,7 @@ from pyang.error import err_add
 from pyang.plugins import lint
 
 
-from .util import yangpath
+from util import yangpath
 
 # Keywords which result in data nodes being created in a YANG tree
 INSTANTIATED_DATA_KEYWORDS = [u"leaf", u"leaf-list", u"container", u"list",
