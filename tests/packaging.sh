@@ -20,6 +20,7 @@ rm -rf $TESTDIR/tvirtenv $TESTDIR/../dist $TESTDIR/../build $TESTDIR/../openconf
 
 echo "packaging..."
 (cd $TESTDIR/..
+$TESTDIR/tvirtenv/bin/pip install wheel
 python setup.py bdist_wheel sdist >/dev/null
 if [ $? -ne 0 ]; then
   echo "Cannot run tests, packaging broken."
