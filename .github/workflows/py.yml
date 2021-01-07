@@ -1,0 +1,35 @@
+name: Python
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [ '2.7', '3.7', '3.8', '3.9', '3.x' ]
+      fail-fast: false
+    name: Python ${{ matrix.python-version }} Packaging Test
+
+    steps:
+    - name: Check out code
+      uses: actions/checkout@v2
+
+    - name: Setup Python
+      uses: actions/setup-python@v2
+      with:
+          python-version: ${{ matrix.python-version }}
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install wheel virtualenv pyang
+        sudo apt-get install libxml2-dev libxslt1-dev
+
+    - name: Run test
+      run: tests/packaging.sh
