@@ -724,10 +724,10 @@ class OCLintFunctions(object):
     for enum in elemtype.search("enum"):
       if re.match(r"[a-z]", enum.arg):
         err_add(ctx.errors, stmt.pos, "OC_ENUM_CASE",
-                (enum.arg, enum.arg.upper()))
+                (enum.arg, enum.arg.upper().replace("-", "_")))
       elif not re.match(r"^[A-Z0-9][A-Z0-9\_\.]{0,}$", enum.arg):
         err_add(ctx.errors, stmt.pos, "OC_ENUM_UNDERSCORES",
-                (enum.arg, enum.arg.upper()))
+                (enum.arg, enum.arg.upper().replace("-", "_")))
 
   @staticmethod
   def check_posix_pattern_equal(ctx, stmt):
@@ -802,10 +802,10 @@ class OCLintFunctions(object):
 
     if re.match(r"^[a-z]", stmt.arg):
       err_add(ctx.errors, stmt.pos, "OC_IDENTITY_CASE",
-              (stmt.arg, stmt.arg.upper()))
+              (stmt.arg, stmt.arg.upper().replace("-", "_")))
     elif not re.match(r"^[A-Z][A-Z0-9\_\.]+$", stmt.arg):
       err_add(ctx.errors, stmt.pos, "OC_IDENTITY_UNDERSCORES",
-              (stmt.arg, stmt.arg.upper()))
+              (stmt.arg, stmt.arg.upper().replace("-", "_")))
 
   @staticmethod
   def check_opstate(ctx, stmt):
