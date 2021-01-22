@@ -839,12 +839,13 @@ class OCLintFunctions(object):
                 stmt.arg)
 
       keypath = keytype.search_one("path")
-      keypathelem = yangpath.split_paths(keypath.arg)
-      for i in range(0,len(keypathelem)):
-        if keypathelem[i] in ["config", "state"]:
-          if len(keypathelem[i+1:]) > 1:
-            err_add(ctx.errors, stmt.pos, "OC_OPSTATE_KEY_LEAFREF_DIRECT",
-                    stmt.arg)
+      if keypath: # only leafrefs have the path attribute.
+        keypathelem = yangpath.split_paths(keypath.arg)
+        for i in range(0,len(keypathelem)):
+          if keypathelem[i] in ["config", "state"]:
+            if len(keypathelem[i+1:]) > 1:
+              err_add(ctx.errors, stmt.pos, "OC_OPSTATE_KEY_LEAFREF_DIRECT",
+                      stmt.arg)
 
       return
 
