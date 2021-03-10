@@ -20,6 +20,7 @@ Implements a Markdown documentation emitter for YANG modules
 
 from .doc_emitter import DocEmitter
 import yangpath
+import six
 from . import markdown_helper
 
 class MarkdownEmitter(DocEmitter):
@@ -36,7 +37,7 @@ class MarkdownEmitter(DocEmitter):
     # handle typedefs
     if len(mod.typedefs) > 0:
       s += md.h3(md.b("Types")) + "\n"
-      for (typename, td) in mod.typedefs.iteritems():
+      for (typename, td) in six.iteritems(mod.typedefs):
         s += md.h4(typename) + "\n"
         s += "\n" + md.b("type") + ": " +  td.attrs['type'] + "\n"
         s += "\n" + md.i("description:") + "<br />\n"
@@ -52,7 +53,7 @@ class MarkdownEmitter(DocEmitter):
         # their base
         derived = { key:value for key,value in mod.identities.items() if value.attrs['base'] == base_id }
         # emit the identities derived from the current base
-        for (idname, id) in derived.iteritems():
+        for (idname, id) in six.iteritems(derived):
           s += md.h4(idname) + "\n"
           s += "\n" + md.b("base identity") + ": " +  id.attrs['base'] + "\n"
           s += "\n" + md.i("description:") + "<br />\n"
