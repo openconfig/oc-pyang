@@ -1,5 +1,5 @@
 Jinja2==2.11.2
-lxml==4.6.2
+lxml==4.6.3
 MarkupSafe==1.1.1
 pyang==2.3.2
 cython
