@@ -4,3 +4,4 @@ MarkupSafe==1.1.1
 pyang==2.3.2
 cython
 enum34
+six
