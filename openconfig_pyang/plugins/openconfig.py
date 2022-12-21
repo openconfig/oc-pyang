@@ -300,6 +300,12 @@ class OpenConfigPlugin(lint.LintPlugin):
     error.add_error_code("OC_LIST_NO_ENCLOSING_CONTAINER", ErrorLevel.MAJOR,
                          "List %s does not have a surrounding container")
 
+    # a list whose surrounding container has the same name.
+    error.add_error_code(
+        "OC_LIST_SURROUNDING_CONTAINER_NAME_SAME", ErrorLevel.MAJOR,
+        "Surrounding container of list %s has the same name (often this should be the plural version of the list name)"
+    )
+
     # when path compression is performed, the containers surrounding
     # lists are removed, if there are two lists with the same name
     # this results in a name collision.
@@ -869,6 +875,10 @@ class OCLintFunctions(object):
     if stmt.parent.keyword != "container":
       err_add(ctx.errors, stmt.parent.pos, "OC_LIST_NO_ENCLOSING_CONTAINER",
               stmt.arg)
+
+    if stmt.parent.arg == stmt.arg:
+      err_add(ctx.errors, stmt.parent.pos,
+              "OC_LIST_SURROUNDING_CONTAINER_NAME_SAME", stmt.parent.arg)
 
     grandparent = stmt.parent.parent
     for ch in grandparent.i_children:
