@@ -339,8 +339,15 @@ def gen_nav_tree(emitter, root_mod, level=0):
   nav += "</ul>\n"
 
   # store the navigation list
-  emitter.moduledocs[root_mod.module_name]['navlist'] = nav
-  emitter.moduledocs[root_mod.module_name]['navid'] = "tree-" + ht.gen_html_id(root_mod.module_name)
+  if root_mod.module.keyword == 'module':
+    # Overwrite information that may have been written by a submodule.
+    emitter.moduledocs[root_mod.module_name]['navlist'] = nav
+    emitter.moduledocs[root_mod.module_name]['navid'] = "tree-" + ht.gen_html_id(root_mod.module_name)
+  else:
+    if 'navlist' not in emitter.moduledocs[root_mod.module_name]:
+      emitter.moduledocs[root_mod.module_name]['navlist'] = nav
+    if 'navid' not in emitter.moduledocs[root_mod.module_name]:
+      emitter.moduledocs[root_mod.module_name]['navid'] = "tree-" + ht.gen_html_id(root_mod.module_name)
 
   #modtop.nav += "</ul>"
   # top.nav += "<li>" + statement.name + "</li>\n"
