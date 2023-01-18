@@ -61,9 +61,16 @@ class HTMLEmitter(DocEmitter):
     mod_div += ht.close_tag(newline=True)
 
     # initialize and store in the module docs
-    self.moduledocs[mod.module_name] = {}
-    self.moduledocs[mod.module_name]['module'] = mod_div
-    self.moduledocs[mod.module_name]['data'] = ""
+    if mod.module_name not in self.moduledocs:
+      self.moduledocs[mod.module_name] = {}
+    if mod.module.keyword == 'module': # Ignore submodules
+      self.moduledocs[mod.module_name]['module'] = mod_div
+    if 'data' not in self.moduledocs[mod.module_name]:
+      self.moduledocs[mod.module_name]['data'] = ""
+    if 'typedefs' not in self.moduledocs[mod.module_name]:
+      self.moduledocs[mod.module_name]['typedefs'] = ""
+    if 'identities' not in self.moduledocs[mod.module_name]:
+      self.moduledocs[mod.module_name]['identities'] = ""
 
     # handle typedefs
     if len(mod.typedefs) > 0:
@@ -86,7 +93,7 @@ class HTMLEmitter(DocEmitter):
       types_div = ""
 
     # store the typedef docs
-    self.moduledocs[mod.module_name]['typedefs'] = types_div
+    self.moduledocs[mod.module_name]['typedefs'] += types_div
 
     # handle identities
     if len(mod.identities) > 0:
@@ -115,7 +122,7 @@ class HTMLEmitter(DocEmitter):
       idents_div = ""
 
     # store the identity docs
-    self.moduledocs[mod.module_name]['identities'] = idents_div
+    self.moduledocs[mod.module_name]['identities'] += idents_div
 
     gen_nav_tree(self, mod, 0)
 
