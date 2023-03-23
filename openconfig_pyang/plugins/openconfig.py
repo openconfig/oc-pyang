@@ -931,7 +931,7 @@ class OCLintFunctions(object):
     if stmt.search_one("container") is None:
       return
 
-    containers = stmt.search("container")
+    containers = stmt.search("container", children=stmt.i_children)
     # Only perform this check if this is a container that has both a config
     # and state container
     c_config, c_state = None, None
@@ -941,15 +941,16 @@ class OCLintFunctions(object):
       elif c.arg == "state":
         c_state = c
 
-    if None in [c_config, c_state]:
+    if c_config is None:
       return
 
     config_elem_names = [i.arg for i in c_config.i_children
                          if i.arg != "config" and
                          i.keyword in INSTANTIATED_DATA_KEYWORDS]
-    state_elem_names = [i.arg for i in c_state.i_children
-                        if i.arg != "state" and
-                        i.keyword in INSTANTIATED_DATA_KEYWORDS]
+    state_elem_names = []
+    if c_state is not None: 
+      state_elem_names = [i.arg for i in c_state.i_children if i.arg != "state"
+                          and i.keyword in INSTANTIATED_DATA_KEYWORDS]
 
     for elem in config_elem_names:
       if elem not in state_elem_names:
