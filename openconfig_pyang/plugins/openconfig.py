@@ -931,7 +931,7 @@ class OCLintFunctions(object):
     if stmt.search_one("container") is None:
       return
 
-    containers = stmt.search("container")
+    containers = stmt.search("container", children=stmt.i_children)
     # Only perform this check if this is a container that has both a config
     # and state container
     c_config, c_state = None, None

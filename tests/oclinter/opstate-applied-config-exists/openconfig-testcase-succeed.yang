@@ -5,7 +5,8 @@ module openconfig-testcase-succeed {
   import openconfig-extensions { prefix oc-ext; }
 
   description
-    "Success test case for applied config leaves being present";
+    "Success test case for a complicated case where the state container is
+    defined in a grouping and the config container isn't";
 
   oc-ext:openconfig-version "0.0.1";
 
@@ -16,7 +17,31 @@ module openconfig-testcase-succeed {
   }
 
   grouping test-config {
+  }
+
+  grouping test-grouping-common {
     leaf tleaf { type string; }
+  }
+
+  grouping test-grouping-state {
+    container state {
+      config false;
+      uses test-grouping-common;
+    }
+  }
+
+  grouping input-interface-state {
+    description
+      "State information of interface";
+  }
+
+  grouping test-group {
+    container test-container {
+      container config {
+        uses test-grouping-common;
+      }
+      uses test-grouping-state;
+    }
   }
 
   grouping foo-top {
@@ -27,7 +52,9 @@ module openconfig-testcase-succeed {
       container state {
         config false;
         uses test-config;
+        uses input-interface-state;
       }
+      uses test-group;
     }
   }
 
