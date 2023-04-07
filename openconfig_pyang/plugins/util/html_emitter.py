@@ -61,9 +61,16 @@ class HTMLEmitter(DocEmitter):
     mod_div += ht.close_tag(newline=True)
 
     # initialize and store in the module docs
-    self.moduledocs[mod.module_name] = {}
-    self.moduledocs[mod.module_name]['module'] = mod_div
-    self.moduledocs[mod.module_name]['data'] = ""
+    if mod.module_name not in self.moduledocs:
+      self.moduledocs[mod.module_name] = {}
+    if mod.module.keyword == 'module': # Ignore submodules
+      self.moduledocs[mod.module_name]['module'] = mod_div
+    if 'data' not in self.moduledocs[mod.module_name]:
+      self.moduledocs[mod.module_name]['data'] = ""
+    if 'typedefs' not in self.moduledocs[mod.module_name]:
+      self.moduledocs[mod.module_name]['typedefs'] = ""
+    if 'identities' not in self.moduledocs[mod.module_name]:
+      self.moduledocs[mod.module_name]['identities'] = ""
 
     # handle typedefs
     if len(mod.typedefs) > 0:
@@ -86,7 +93,7 @@ class HTMLEmitter(DocEmitter):
       types_div = ""
 
     # store the typedef docs
-    self.moduledocs[mod.module_name]['typedefs'] = types_div
+    self.moduledocs[mod.module_name]['typedefs'] += types_div
 
     # handle identities
     if len(mod.identities) > 0:
@@ -115,7 +122,7 @@ class HTMLEmitter(DocEmitter):
       idents_div = ""
 
     # store the identity docs
-    self.moduledocs[mod.module_name]['identities'] = idents_div
+    self.moduledocs[mod.module_name]['identities'] += idents_div
 
     gen_nav_tree(self, mod, 0)
 
@@ -332,8 +339,15 @@ def gen_nav_tree(emitter, root_mod, level=0):
   nav += "</ul>\n"
 
   # store the navigation list
-  emitter.moduledocs[root_mod.module_name]['navlist'] = nav
-  emitter.moduledocs[root_mod.module_name]['navid'] = "tree-" + ht.gen_html_id(root_mod.module_name)
+  if root_mod.module.keyword == 'module':
+    # Overwrite information that may have been written by a submodule.
+    emitter.moduledocs[root_mod.module_name]['navlist'] = nav
+    emitter.moduledocs[root_mod.module_name]['navid'] = "tree-" + ht.gen_html_id(root_mod.module_name)
+  else:
+    if 'navlist' not in emitter.moduledocs[root_mod.module_name]:
+      emitter.moduledocs[root_mod.module_name]['navlist'] = nav
+    if 'navid' not in emitter.moduledocs[root_mod.module_name]:
+      emitter.moduledocs[root_mod.module_name]['navid'] = "tree-" + ht.gen_html_id(root_mod.module_name)
 
   #modtop.nav += "</ul>"
   # top.nav += "<li>" + statement.name + "</li>\n"
