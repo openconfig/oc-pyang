@@ -304,12 +304,11 @@ class OpenConfigPlugin(lint.LintPlugin):
         "OC_OPSTATE_APPLIED_CONFIG", ErrorLevel.MAJOR,
         "\"%s\" is not mirrored in the state container at %s")
 
-    # a list is within a container that has elements other than the list
-    # within it
+    # a list that has siblings.
     error.add_error_code(
-        "OC_LIST_SURROUNDING_CONTAINER", ErrorLevel.MAJOR,
-        "List %s is within a container (%s) that has other elements "
-        "within it: %s")
+        "OC_LIST_HAS_SIBLING", ErrorLevel.MAJOR,
+        "Parent node (%s) has multiple children where one is a list, but a list "
+        "is not allowed to have siblings: (%s)")
 
     # a list that does not have a container above it
     error.add_error_code(
@@ -506,6 +505,9 @@ class OCLintStages(object):
         stmt: pyang.Statement matching the validation call
     """
     validmap = {
+        "*": [
+            OCLintFunctions.check_list_no_sibling,
+        ],
         u"LEAVES": [
             OCLintFunctions.check_opstate,
         ],
@@ -882,6 +884,33 @@ class OCLintFunctions(object):
                   (stmt.arg, pathstr))
 
   @staticmethod
+  def check_list_no_sibling(ctx, stmt):
+    """Check that a list has no sibling, and a non-list doesn't have a list as a
+    sibling.
+
+    Args:
+      ctx: pyang.Context for the validation
+      stmt: pyang.Statement for the node
+    """
+
+    if stmt.parent is None:
+      return
+    siblings = [(i.keyword, i.arg) for i in stmt.parent.i_children
+                       if i.keyword in INSTANTIATED_DATA_KEYWORDS]
+
+    has_list = False
+    for s in siblings:
+      if s[0] == "list":
+        has_list = True
+        break
+
+    if has_list and len(siblings) > 1:
+      err_add(ctx.errors, stmt.parent.pos,
+              "OC_LIST_HAS_SIBLING",
+              (stmt.parent.arg,
+               ", ".join((f"{s[0]}: {s[1]}" for s in siblings))))
+
+  @staticmethod
   def check_list_enclosing_container(ctx, stmt):
     """Check that a list has an enclosing container and that its
     name is not duplicated when path compression is performed.
@@ -899,22 +928,14 @@ class OCLintFunctions(object):
               "OC_LIST_NO_ENCLOSING_CONTAINER", stmt.arg)
 
     grandparent = stmt.parent.parent
-    for ch in grandparent.i_children:
-      if ch.keyword == "container" and ch.arg != stmt.parent.arg:
-        if len(ch.i_children) == 1 and ch.i_children[0].arg == stmt.arg \
-            and ch.i_children[0].keyword == "list":
-          err_add(ctx.errors, stmt.parent.pos,
-                  "OC_LIST_DUPLICATE_COMPRESSED_NAME",
-                  (stmt.arg, stmt.parent.arg))
-
-    if parent_substmts != [stmt.arg]:
-      remaining_parent_substmts = [i.arg for i in stmt.parent.i_children
-                                   if i.arg != stmt.arg and i.keyword
-                                   in INSTANTIATED_DATA_KEYWORDS]
-      err_add(ctx.errors, stmt.parent.pos,
-              "OC_LIST_SURROUNDING_CONTAINER",
-              (stmt.arg, stmt.parent.arg,
-               ", ".join(remaining_parent_substmts)))
+    if grandparent:
+      for ch in grandparent.i_children:
+        if ch.keyword == "container" and ch.arg != stmt.parent.arg:
+          if len(ch.i_children) == 1 and ch.i_children[0].arg == stmt.arg \
+              and ch.i_children[0].keyword == "list":
+            err_add(ctx.errors, stmt.parent.pos,
+                    "OC_LIST_DUPLICATE_COMPRESSED_NAME",
+                    (stmt.arg, stmt.parent.arg))
 
   @staticmethod
   def check_leaf_mirroring(ctx, stmt):
