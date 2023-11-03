@@ -15,7 +15,7 @@
 
 TESTDIR="$(cd -P "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-$TESTDIR/tvirtenv/bin/pip install setuptools==58.2.0
+pip install setuptools==58.2.0
 
 cd $TESTDIR/..
 rm -rf $TESTDIR/tvirtenv $TESTDIR/../dist $TESTDIR/../build $TESTDIR/../openconfig_pyang.egg-info
