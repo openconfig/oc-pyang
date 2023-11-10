@@ -81,6 +81,21 @@ class PathPlugin(plugin.PyangPlugin):
                               action="store_true",
                               help="""Generate paths output for use with relocate
                               plugin"""),
+        optparse.make_option("--prefix-module",
+                              dest="prefix_module",
+                              action="store_true",
+                              help="""Generate paths output with module name
+                              prefix"""),
+        optparse.make_option("--sparse",
+                             dest="sparse",
+                             action="store_true",
+                             help="""Generate paths output without extra
+                             whitespace"""),
+        optparse.make_option("--config-after",
+                             dest="config_after",
+                             action="store_true",
+                             help="""Generate paths output with configurable
+                             flag after each path"""),
                 ]
     g = optparser.add_option_group("paths output specific options")
     g.add_options(optlist)
@@ -109,7 +124,7 @@ def emit_paths(ctx, modules, fd):
   for module in modules:
     children = [child for child in module.i_children]
     if children:
-      if (not ctx.opts.print_plain and not ctx.opts.relocate_output):
+      if (not ctx.opts.print_plain and not ctx.opts.relocate_output and not ctx.opts.prefix_module):
         fd.write('\nmodule %s:\n' % module.i_modulename)
       elif ctx.opts.relocate_output:
         fd.write('\nmodule %s\n' % module.i_modulename)
@@ -155,7 +170,7 @@ def print_node(node, module, fd, prefix, ctx, level=0):
   else:
       config = None
 
-  pathstr = get_pathstr(pathstr, config, ctx, level)
+  pathstr = get_pathstr(pathstr, config, ctx, level, module.i_modulename)
 
   fd.write(pathstr)
 
@@ -175,19 +190,41 @@ def print_node(node, module, fd, prefix, ctx, level=0):
         print_children(node.i_children, module, fd, prefix, ctx, level)
 
 
-def get_pathstr(pathstr, config, ctx, level):
+def get_pathstr(pathstr, config, ctx, level, modname):
 
   if ctx.opts.print_plain or ctx.opts.relocate_output:
     return pathstr
 
   s = ''
-  if ctx.opts.print_depth:
-    s += '  [%d]' % level
+  if ctx.opts.prefix_module:
+    s += '%s:' % modname
+  if ctx.opts.sparse:
+    if ctx.opts.print_depth:
+      s += ' [%d]' % level
+    if ctx.opts.config_after:
+      if config:
+        s += ' %s [%s]' % (pathstr, config)
+      else:
+        s += ' %s' % (pathstr)
+    else:
+      if config:
+        s += ' [%s] %s' % (config, pathstr)
+      else:
+        s += ' %s' % (pathstr)
   else:
-    s += '     '
-  if config:
-    s += '  [%s] %s' % (config, pathstr)
-  else:
-    s += '       %s' % (pathstr)
+    if ctx.opts.print_depth:
+      s += '  [%d]' % level
+    else:
+      s += '     '
+    if ctx.opts.config_after:
+      if config:
+        s += '  %s [%s]' % (pathstr, config)
+      else:
+        s += '       %s' % (pathstr)
+    else:
+      if config:
+        s += '  [%s] %s' % (config, pathstr)
+      else:
+        s += '       %s' % (pathstr)
 
   return s
