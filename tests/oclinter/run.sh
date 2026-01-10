@@ -31,12 +31,12 @@ for i in $(find $TESTDIR -mindepth 1 -maxdepth 1 -type d); do
 
     if [ $okres -ne 0 ]; then
       failed=1
-      echo "$oklog"
+      echo "return code: $okres\n$oklog"
     fi
 
     if [ $brokenres -eq 0 ]; then
       failed=1
-      echo "$brokenlog"
+      echo "return code: $brokenres\n$brokenlog"
     fi
 
     if [ $failed -ne 0 ]; then
