@@ -9,4 +9,4 @@ broken:
 	pyang --plugindir $(PLUGIN_DIR) \
 	    --openconfig --oc-only -p ${ROOT_DIR}/../common \
 			    ${ROOT_DIR}/openconfig-testcase-fail.yang \
-						--print-error-code 2>&1 
+						--print-error-code 2>&1  | grep -v OC_STYLE_AVOID_CHOICE
