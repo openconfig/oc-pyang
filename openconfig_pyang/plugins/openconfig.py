@@ -106,6 +106,22 @@ def pyang_plugin_init():
   """
   plugin.register_plugin(OpenConfigPlugin())
 
+def print_path(stmt):
+  """Return a string of the path for a particular node by traversing
+     the hierarchy.
+
+
+    Args:
+        stmt: pyang.Statement for which the path is to be returned.
+  """
+  s = stmt
+  p = []
+  while s.parent is not None:
+    p.append(s.arg)
+    s = s.parent
+  # ensure that the path is absolute (starts with /)
+  p.append("")
+  return "/".join(p[::-1])
 
 class OpenConfigPlugin(lint.LintPlugin):
   """Plugin for Pyang to validate OpenConfig style guide conventions."""
@@ -317,11 +333,21 @@ class OpenConfigPlugin(lint.LintPlugin):
 
     # when path compression is performed, the containers surrounding
     # lists are removed, if there are two lists with the same name
-    # this results in a name collision.
+    # this results in a name collision. this check also validates that
+    # a list does not clash in name with an entity within the config
+    # or state containers that will be removed.
     error.add_error_code(
         "OC_LIST_DUPLICATE_COMPRESSED_NAME", ErrorLevel.MAJOR,
-        "List %s has a duplicate name when the parent container %s" + \
+        "List %s (%s) has a duplicate name (with %s) when the parent container %s" + \
         " is removed.")
+
+    # when path compression is performed, the config and state containers
+    # are removed, if there is a grandparent of a leaf with the same name,
+    # the names will clash.
+    error.add_error_code(
+      "OC_LEAF_DUPLICATE_COMPRESSED_NAME", ErrorLevel.MAJOR,
+      "Leaf %s (%s) has a duplicate name (with %s) when the parent %s container" + \
+      " is removed.")
 
     # a module defines data nodes at the top-level
     error.add_error_code(
@@ -510,6 +536,7 @@ class OCLintStages(object):
         ],
         u"LEAVES": [
             OCLintFunctions.check_opstate,
+            OCLintFunctions.check_compressed_names,
         ],
         u"list": [
             OCLintFunctions.check_list_enclosing_container,
@@ -884,6 +911,30 @@ class OCLintFunctions(object):
                   (stmt.arg, pathstr))
 
   @staticmethod
+  def check_compressed_names(ctx, stmt):
+    """Check that a leaf node does not have a grandparent that has the
+    same name.
+
+    Args:
+      ctx: pyang.Context for the validation
+      stmt. pyang.Statement for the leaf node
+    """
+    if stmt.parent is None or stmt.parent.parent is None:
+      return
+
+    for grandparent in stmt.parent.parent.i_children:
+      # we only check containers because a grandparent leaf node is a list
+      # key (the only type of leaf that is not under a config or state container)
+      # and duplicate names must be allowed here.
+      if grandparent.keyword in LEAFNODE_KEYWORDS:
+        continue
+      elif grandparent.arg == stmt.arg:
+        err_add(ctx.errors, stmt.pos, "OC_LEAF_DUPLICATE_COMPRESSED_NAME",
+          (stmt.arg, print_path(stmt), print_path(grandparent), stmt.parent.arg))
+    return
+      
+  
+  @staticmethod
   def check_list_no_sibling(ctx, stmt):
     """Check that a list has no sibling, and a non-list doesn't have a list as a
     sibling.
@@ -935,7 +986,15 @@ class OCLintFunctions(object):
               and ch.i_children[0].keyword == "list":
             err_add(ctx.errors, stmt.parent.pos,
                     "OC_LIST_DUPLICATE_COMPRESSED_NAME",
-                    (stmt.arg, stmt.parent.arg))
+                    (stmt.arg, print_path(stmt), print_path(ch.i_children[0]), stmt.parent.arg))
+        # We must recurse into config and state containers since they are to be
+        # removed.
+        if ch.keyword == "container" and ch.arg in ["config", "state"]:
+          for e in ch.i_children:
+            if e.arg == stmt.arg:
+              err_add(ctx.errors, stmt.pos,
+                "OC_LIST_DUPLICATE_COMPRESSED_NAME",
+                (stmt.arg, print_path(stmt), print_path(e), stmt.parent.arg))
 
   @staticmethod
   def check_leaf_mirroring(ctx, stmt):

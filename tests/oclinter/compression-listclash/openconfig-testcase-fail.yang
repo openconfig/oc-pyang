@@ -1,0 +1,65 @@
+module openconfig-testcase-fail {
+  prefix "oc-tc";
+  namespace "http://openconfig.net/linter/testcase";
+
+  import openconfig-extensions { prefix oc-ext; }
+
+  description
+    "Failure test case for compression causing a clash
+    in names when considering a list.
+    
+    /config/clash will have the same name
+    as /container-two/clash when compression occurs - as
+    the config and container-two containers are compressed
+    out.";
+
+  oc-ext:openconfig-version "0.0.1";
+
+  revision 2016-09-28 {
+    reference "0.0.1";
+    description
+      "Revision statement";
+  }
+
+  grouping list-config {
+		leaf keyleaf { type string; }
+	}
+
+	grouping container-config {
+    leaf clash { type string; }
+  }
+
+  grouping foo-top {
+    container config {
+      uses container-config;
+    }
+  
+    container state {
+      config false;
+      uses container-config;
+    }
+
+    container container-two {
+      list clash {
+        key "keyleaf";
+
+        leaf keyleaf {
+          type leafref {
+              path "../config/keyleaf";
+          }
+        }
+
+        container config {
+          uses list-config;
+        }
+
+        container state {
+          config false;
+          uses list-config;
+        }
+      }
+    }
+  }
+
+  uses foo-top;
+}
