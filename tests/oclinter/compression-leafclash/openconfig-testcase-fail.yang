@@ -20,10 +20,10 @@ module openconfig-testcase-fail {
   }
 
   grouping container-config {
-		leaf a { type string; }
-	}
+    leaf a { type string; }
+  }
 
-	grouping clash-config {
+  grouping clash-config {
     leaf clash { type string; }
   }
 

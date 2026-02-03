@@ -42,6 +42,12 @@ LEAFNODE_KEYWORDS = [u"leaf", u"leaf-list"]
 # YANG types that should not be used in OpenConfig models.
 BAD_TYPES = [u"empty", u"bits"]
 
+# Container names that are specific OpenConfig "config" and "state"
+# containers.
+OPENCONFIG_OPSTATE_CONTAINERS = [u"config", u"state"]
+OPENCONFIG_CONFIG_CONTAINER = u"config"
+OPENCONFIG_STATE_CONTAINER = u"state"
+
 
 class ErrorLevel(IntEnum):
   """An enumeration of the Pyang error levels.
@@ -871,7 +877,7 @@ class OCLintFunctions(object):
       if keypath: # only leafrefs have the path attribute.
         keypathelem = yangpath.split_paths(keypath.arg)
         for i in range(0,len(keypathelem)):
-          if keypathelem[i] in ["config", "state"]:
+          if keypathelem[i] in OPENCONFIG_OPSTATE_CONTAINERS:
             if len(keypathelem[i+1:]) > 1:
               err_add(ctx.errors, stmt.pos, "OC_OPSTATE_KEY_LEAFREF_DIRECT",
                       stmt.arg)
@@ -880,8 +886,8 @@ class OCLintFunctions(object):
 
     path_elements = yangpath.split_paths(pathstr)
     # count number of 'config' and 'state' elements in the path
-    confignum = path_elements.count("config")
-    statenum = path_elements.count("state")
+    confignum = path_elements.count(OPENCONFIG_CONFIG_CONTAINER)
+    statenum = path_elements.count(OPENCONFIG_STATE_CONTAINER)
     if confignum != 1 and statenum != 1:
       err_add(ctx.errors, stmt.pos, "OC_OPSTATE_CONTAINER_COUNT",
               (pathstr))
@@ -889,21 +895,21 @@ class OCLintFunctions(object):
     # for elements in a config or state container, make sure they have the
     # correct config property
     if stmt.parent.keyword == "container":
-      if stmt.parent.arg == "config":
+      if stmt.parent.arg == OPENCONFIG_CONFIG_CONTAINER:
         if stmt.i_config is False:
           err_add(ctx.errors, stmt.pos, "OC_OPSTATE_CONFIG_PROPERTY",
-                  (stmt.arg, "config", "true"))
-      elif stmt.parent.arg == "state":
+                  (stmt.arg, OPENCONFIG_CONFIG_CONTAINER, "true"))
+      elif stmt.parent.arg == OPENCONFIG_STATE_CONTAINER:
         if stmt.i_config is True:
           err_add(ctx.errors, stmt.parent.pos, "OC_OPSTATE_CONFIG_PROPERTY",
-                  (stmt.arg, "state", "false"))
+                  (stmt.arg, OPENCONFIG_STATE_CONTAINER, "false"))
       else:
         valid_enclosing_state = False
 
         if stmt.i_config is False:
           # Allow nested containers within a state container
           path_elements = yangpath.split_paths(pathstr)
-          if u"state" in path_elements:
+          if OPENCONFIG_STATE_CONTAINER in path_elements:
             valid_enclosing_state = True
 
         if valid_enclosing_state is False:
@@ -917,7 +923,7 @@ class OCLintFunctions(object):
 
     Args:
       ctx: pyang.Context for the validation
-      stmt. pyang.Statement for the leaf node
+      stmt: pyang.Statement for the leaf node
     """
     if stmt.parent is None or stmt.parent.parent is None:
       return
@@ -989,7 +995,7 @@ class OCLintFunctions(object):
                     (stmt.arg, print_path(stmt), print_path(ch.i_children[0]), stmt.parent.arg))
         # We must recurse into config and state containers since they are to be
         # removed.
-        if ch.keyword == "container" and ch.arg in ["config", "state"]:
+        if ch.keyword == "container" and ch.arg in OPENCONFIG_OPSTATE_CONTAINERS:
           for e in ch.i_children:
             if e.arg == stmt.arg:
               err_add(ctx.errors, stmt.pos,
@@ -1016,20 +1022,21 @@ class OCLintFunctions(object):
     # and state container
     c_config, c_state = None, None
     for c in containers:
-      if c.arg == "config":
+      if c.arg == OPENCONFIG_CONFIG_CONTAINER:
         c_config = c
-      elif c.arg == "state":
+      elif c.arg == OPENCONFIG_STATE_CONTAINER:
         c_state = c
 
     if c_config is None:
       return
 
     config_elem_names = [i.arg for i in c_config.i_children
-                         if i.arg != "config" and
+                         if i.arg != OPENCONFIG_CONFIG_CONTAINER and
                          i.keyword in INSTANTIATED_DATA_KEYWORDS]
     state_elem_names = []
     if c_state is not None: 
-      state_elem_names = [i.arg for i in c_state.i_children if i.arg != "state"
+      state_elem_names = [i.arg for i in c_state.i_children 
+                          if i.arg != OPENCONFIG_STATE_CONTAINER
                           and i.keyword in INSTANTIATED_DATA_KEYWORDS]
 
     for elem in config_elem_names:

@@ -20,14 +20,15 @@ module openconfig-testcase-succeed {
   }
 
   grouping list-config {
-		leaf keyleaf { type string; }
-	}
+    leaf keyleaf { type string; }
+  }
 
-	grouping container-config {
+  grouping container-config {
     leaf no-clash { type string; }
   }
 
   grouping foo-top {
+
     container config {
     }
   

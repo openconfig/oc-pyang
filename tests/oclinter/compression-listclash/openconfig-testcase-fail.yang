@@ -22,10 +22,10 @@ module openconfig-testcase-fail {
   }
 
   grouping list-config {
-		leaf keyleaf { type string; }
-	}
+    leaf keyleaf { type string; }
+  }
 
-	grouping container-config {
+  grouping container-config {
     leaf clash { type string; }
   }
 
