@@ -1,0 +1,73 @@
+module openconfig-testcase-succeed {
+  prefix "oc-tc";
+  namespace "http://openconfig.net/linter/testcase";
+
+  import openconfig-extensions { prefix oc-ext; }
+
+  description
+    "Failure test case for compression causing a clash
+    in names -- clash between leaf and container.
+    
+    /config/no-clash will not have the same name as /clash
+    after compression.";
+
+  oc-ext:openconfig-version "0.0.1";
+
+  revision 2016-09-28 {
+    reference "0.0.1";
+    description
+      "Revision statement";
+  }
+
+  grouping container-config {
+    leaf a { type string; }
+  }
+
+  grouping clash-config {
+    leaf no-clash { type string; }
+  }
+
+  grouping list-config {
+    leaf a { type string; }
+  }
+
+  grouping foo-top {
+    container config {
+      uses clash-config;
+    }
+    container state {
+      config false;
+      uses clash-config;
+    }
+    
+    container clash {
+      container config {
+        uses container-config;
+      }
+      container state {
+        config false;
+        uses container-config;
+      }
+    }
+
+    // The case that we have a list that has a clashing name 
+    // for the key must be OK.
+    container surround {
+      list a-list {
+        key "a";
+
+        leaf a { type leafref { path "../config/a"; } }
+
+        container config {
+          uses list-config;
+        }
+        container state {
+          config false;
+          uses list-config;
+        }
+      }
+    }
+  }
+
+  uses foo-top;
+}
