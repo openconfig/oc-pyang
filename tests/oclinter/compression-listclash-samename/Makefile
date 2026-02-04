@@ -6,3 +6,6 @@ ok:
 		${ROOT_DIR}/openconfig-testcase-succeed.yang
 
 broken:
+	# Return an error so that we always report this broken. There is no negative
+	# test in this case.
+	$(error 42)
