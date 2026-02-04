@@ -5,7 +5,7 @@ module openconfig-testcase-succeed {
   import openconfig-extensions { prefix oc-ext; }
 
   description
-    "Failure test case for compression causing a clash
+    "Success test case for compression causing a clash
     in names when considering a list.
     
     /config/no-clash will NOT have the same name
@@ -25,6 +25,10 @@ module openconfig-testcase-succeed {
 
   grouping container-config {
     leaf no-clash { type string; }
+  }
+
+  grouping fish-config {
+    leaf fish { type string; }
   }
 
   grouping foo-top {
@@ -54,6 +58,31 @@ module openconfig-testcase-succeed {
         container state {
           config false;
           uses list-config;
+        }
+      }
+    }
+
+    // Validate the case that there is a list with a key
+    // that shares the name of the list. This is also
+    // checked specifically by the
+    // compression-listclash-samename check.
+    container surround {
+      list fish {
+        key "fish";
+
+        leaf fish {
+          type leafref {
+            path "../config/fish";
+          }
+        }
+
+        container config {
+          uses fish-config;
+        }
+
+        container state {
+          config false;
+          uses fish-config;
         }
       }
     }

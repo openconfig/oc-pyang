@@ -22,14 +22,14 @@ rm -rf $TESTDIR/tvirtenv $TESTDIR/../dist $TESTDIR/../build $TESTDIR/../openconf
 
 echo "packaging..."
 (cd $TESTDIR/..
-python setup.py bdist_wheel sdist >/dev/null
+python3 setup.py bdist_wheel sdist >/dev/null
 if [ $? -ne 0 ]; then
   echo "Cannot run tests, packaging broken."
   exit 127
 fi)
 
 echo "creating virtualenv..."
-virtualenv $TESTDIR/tvirtenv >/dev/null
+python3 -m virtualenv $TESTDIR/tvirtenv >/dev/null
 source $TESTDIR/tvirtenv/bin/activate
 
 echo "installing package..."

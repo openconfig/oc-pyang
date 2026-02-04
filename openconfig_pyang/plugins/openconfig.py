@@ -843,18 +843,13 @@ class OCLintFunctions(object):
               (stmt.arg, stmt.arg.upper().replace("-", "_")))
 
   @staticmethod
-  def check_opstate(ctx, stmt):
-    """Check operational state validation rules.
+  def _is_key(stmt):
+    """Check whether stmt is the key of a list. Returns True
+    if this is the case.
 
     Args:
-      ctx: pyang.Context for validation
-      stmt: pyang.Statement for a leaf or leaf-list
+      stmt: pyang.Statement for the entity being checked.
     """
-    pathstr = statements.mk_path_str(stmt)
-
-    # leaves that are list keys are exempt from this check.  YANG
-    # requires them at the top level of the list, i.e., not allowed
-    # in a descendent container
     is_key = False
     if stmt.parent.keyword == "list" and stmt.keyword == "leaf":
       key_stmt = stmt.parent.search_one("key")
@@ -867,7 +862,22 @@ class OCLintFunctions(object):
         if stmt.arg in key_parts:
           is_key = True
 
-    if is_key:
+    return is_key
+
+  @staticmethod
+  def check_opstate(ctx, stmt):
+    """Check operational state validation rules.
+
+    Args:
+      ctx: pyang.Context for validation
+      stmt: pyang.Statement for a leaf or leaf-list
+    """
+    pathstr = statements.mk_path_str(stmt)
+
+    # leaves that are list keys are exempt from this check.  YANG
+    # requires them at the top level of the list, i.e., not allowed
+    # in a descendent container
+    if OCLintFunctions._is_key(stmt):
       keytype = stmt.search_one("type")
       if keytype.arg != "leafref":
         err_add(ctx.errors, stmt.pos, "OC_OPSTATE_KEY_LEAFREF",
@@ -929,10 +939,15 @@ class OCLintFunctions(object):
       return
 
     for grandparent in stmt.parent.parent.i_children:
-      # we only check containers because a grandparent leaf node is a list
-      # key (the only type of leaf that is not under a config or state container)
-      # and duplicate names must be allowed here.
-      if grandparent.keyword in LEAFNODE_KEYWORDS:
+      if OCLintFunctions._is_key(stmt):
+        # There is a special case where a key of a list may share the name
+        # of its parent list. This is an allowable case - since the key
+        # leaf itself will be compressed out.
+        continue
+      elif grandparent.keyword in LEAFNODE_KEYWORDS:
+        # we only check containers because a grandparent leaf node is a list
+        # key (the only type of leaf that is not under a config or state container)
+        # and duplicate names must be allowed here.
         continue
       elif grandparent.arg == stmt.arg:
         err_add(ctx.errors, stmt.pos, "OC_LEAF_DUPLICATE_COMPRESSED_NAME",
@@ -984,6 +999,8 @@ class OCLintFunctions(object):
       err_add(ctx.errors, stmt.parent.pos,
               "OC_LIST_NO_ENCLOSING_CONTAINER", stmt.arg)
 
+    # Check whether the list has a duplicated name when compression
+    # is applied.
     grandparent = stmt.parent.parent
     if grandparent:
       for ch in grandparent.i_children:
@@ -993,6 +1010,7 @@ class OCLintFunctions(object):
             err_add(ctx.errors, stmt.parent.pos,
                     "OC_LIST_DUPLICATE_COMPRESSED_NAME",
                     (stmt.arg, print_path(stmt), print_path(ch.i_children[0]), stmt.parent.arg))
+            
         # We must recurse into config and state containers since they are to be
         # removed.
         if ch.keyword == "container" and ch.arg in OPENCONFIG_OPSTATE_CONTAINERS:
