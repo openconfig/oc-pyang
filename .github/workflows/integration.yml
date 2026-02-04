@@ -1,0 +1,42 @@
+name: Python
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Check out code
+      uses: actions/checkout@v6
+
+    - name: Check out public repo
+      uses: actions/checkout@v6
+        with: openconfig/public
+        path: public
+
+    - name: Setup Python
+      uses: actions/setup-python@v2
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install wheel virtualenv pyang
+        sudo apt-get update
+        sudo apt-get install libxml2-dev libxslt1-dev
+
+    - name: Run packaging test
+      run: tests/packaging.sh
+
+    - name: Generate test script
+      run: |
+         go run tests/oclinter/integration/gen.go -path ${GITHUB_WORKSPACE}/public > ${GITHUB_WORKSPACE}/run.sh
+
+    - name: Run integration test
+      run: |
+         ${GITHUB_WORKSPACE}/run.sh
