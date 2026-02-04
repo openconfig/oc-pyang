@@ -1,4 +1,4 @@
-name: Python
+name: OpenConfig integration
 
 on:
   push:
@@ -10,6 +10,8 @@ jobs:
 
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
     - name: Check out code
