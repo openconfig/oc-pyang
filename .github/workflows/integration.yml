@@ -46,6 +46,10 @@ jobs:
          ${GITHUB_WORKSPACE}/tests/integration/gen -path ${GITHUB_WORKSPACE}/public > ${GITHUB_WORKSPACE}/run.sh
          chmod +x ${GITHUB_WORKSPACE}/run.sh
 
+    - name: Output script
+      run: |
+         cat ${GITHUB_WORKSPACE}/run.sh
+
     - name: Run integration test
       run: |
          PLUGIN_DIR=
