@@ -40,7 +40,7 @@ jobs:
 
     - name: Generate test script
       run: |
-         go run tests/oclinter/integration/gen.go -path ${GITHUB_WORKSPACE}/public > ${GITHUB_WORKSPACE}/run.sh
+         go run ${GITHUB_WORKSPACE}/tests/oclinter/integration/gen.go -path ${GITHUB_WORKSPACE}/public > ${GITHUB_WORKSPACE}/run.sh
 
     - name: Run integration test
       run: |
