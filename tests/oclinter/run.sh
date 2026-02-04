@@ -16,9 +16,6 @@
 TESTDIR="$(cd -P "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 FAIL=0
 
-# avoid python warnings causing our test cases to fail unexpectedly.
-export PYTHONWARNINGS="ignore"
-
 export PLUGIN_DIR=$(/usr/bin/env python -c \
       'import openconfig_pyang; import os; \
        print("{}/plugins".format(os.path.dirname(openconfig_pyang.__file__)))')
@@ -34,12 +31,12 @@ for i in $(find $TESTDIR -mindepth 1 -maxdepth 1 -type d); do
 
     if [ $okres -ne 0 ]; then
       failed=1
-      printf "Correct case failed unexpected.\n OK return code: $okres\n $oklog"
+      echo "$oklog"
     fi
 
     if [ $brokenres -eq 0 ]; then
       failed=1
-      printf "Failure example unexpectedly passed.\n Broken return code: $brokenres\n $brokenlog"
+      echo "$brokenlog"
     fi
 
     if [ $failed -ne 0 ]; then
