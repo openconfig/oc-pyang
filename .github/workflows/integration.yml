@@ -44,6 +44,7 @@ jobs:
          go get
          go build ${GITHUB_WORKSPACE}/tests/integration/gen.go 
          ${GITHUB_WORKSPACE}/tests/integration/gen -path ${GITHUB_WORKSPACE}/public > ${GITHUB_WORKSPACE}/run.sh
+         chmod +x ${GITHUB_WORKSPACE}/run.sh
 
     - name: Run integration test
       run: |
