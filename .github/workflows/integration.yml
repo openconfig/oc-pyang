@@ -43,7 +43,7 @@ jobs:
          cd ${GITHUB_WORKSPACE}/tests/integration
          go get
          go build ${GITHUB_WORKSPACE}/tests/integration/gen.go 
-         ${GITHUB_WORKSPACE}/tests/integration/integration -path ${GITHUB_WORKSPACE}/public > ${GITHUB_WORKSPACE}/run.sh
+         ${GITHUB_WORKSPACE}/tests/integration/gen -path ${GITHUB_WORKSPACE}/public > ${GITHUB_WORKSPACE}/run.sh
 
     - name: Run integration test
       run: |
