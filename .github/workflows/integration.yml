@@ -19,8 +19,9 @@ jobs:
 
     - name: Check out public repo
       uses: actions/checkout@v6
-        with: openconfig/public
-        path: public
+        with: 
+          repository: openconfig/public
+          path: public
 
     - name: Setup Python
       uses: actions/setup-python@v2
