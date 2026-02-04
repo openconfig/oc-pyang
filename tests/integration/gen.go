@@ -26,6 +26,10 @@ func mustTemplate(name, src string) *template.Template {
 var tmpl = mustTemplate("bash", `
 #!/bin/bash
 
+export PLUGIN_DIR=$(/usr/bin/env python -c \
+      'import openconfig_pyang; import os; \
+       print("{}/plugins".format(os.path.dirname(openconfig_pyang.__file__)))')
+
 FAIL=0
 
 {{ range $cmd := .Cmds }}
