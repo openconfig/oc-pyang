@@ -1,0 +1,49 @@
+module openconfig-testcase-succeed {
+  prefix "oc-tc";
+  namespace "http://openconfig.net/linter/testcase";
+
+  import openconfig-extensions { prefix oc-ext; }
+
+  description
+    "Success test case for compression check when there is
+    a list node that shares the same name as its own key.";
+
+  oc-ext:openconfig-version "0.0.1";
+
+  revision 2016-09-28 {
+    reference "0.0.1";
+    description
+      "Revision statement";
+  }
+
+  grouping fish-config {
+    leaf fish { type string; }
+  }
+
+  grouping foo-top {
+    // Validate the case that there is a list with a key
+    // that shares the name of the list.
+    container surround {
+      list fish {
+        key "fish";
+
+        leaf fish {
+          type leafref {
+            path "../config/fish";
+          }
+        }
+
+        container config {
+          uses fish-config;
+        }
+
+        container state {
+          config false;
+          uses fish-config;
+        }
+      }
+    }
+  }
+
+  uses foo-top;
+}

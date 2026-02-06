@@ -1,0 +1,92 @@
+module openconfig-testcase-succeed {
+  prefix "oc-tc";
+  namespace "http://openconfig.net/linter/testcase";
+
+  import openconfig-extensions { prefix oc-ext; }
+
+  description
+    "Success test case for compression causing a clash
+    in names when considering a list.
+    
+    /config/no-clash will NOT have the same name
+    as /container-two/clash when compression occurs.";
+
+  oc-ext:openconfig-version "0.0.1";
+
+  revision 2016-09-28 {
+    reference "0.0.1";
+    description
+      "Revision statement";
+  }
+
+  grouping list-config {
+    leaf keyleaf { type string; }
+  }
+
+  grouping container-config {
+    leaf no-clash { type string; }
+  }
+
+  grouping fish-config {
+    leaf fish { type string; }
+  }
+
+  grouping foo-top {
+    container config {
+      uses container-config;
+    }
+  
+    container state {
+      config false;
+      uses container-config;
+    }
+
+    container container-two {
+      list clash {
+        key "keyleaf";
+
+        leaf keyleaf {
+          type leafref {
+              path "../config/keyleaf";
+          }
+        }
+
+        container config {
+          uses list-config;
+        }
+
+        container state {
+          config false;
+          uses list-config;
+        }
+      }
+    }
+
+    // Validate the case that there is a list with a key
+    // that shares the name of the list. This is also
+    // checked specifically by the
+    // compression-listclash-samename check.
+    container surround {
+      list fish {
+        key "fish";
+
+        leaf fish {
+          type leafref {
+            path "../config/fish";
+          }
+        }
+
+        container config {
+          uses fish-config;
+        }
+
+        container state {
+          config false;
+          uses fish-config;
+        }
+      }
+    }
+  }
+
+  uses foo-top;
+}
