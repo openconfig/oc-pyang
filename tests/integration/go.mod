@@ -1,6 +1,6 @@
 module github.com/openconfig/oc-pyang/tests/integration
 
-go 1.25.7
+go 1.25.9
 
 require (
 	github.com/golang/glog v1.2.5
